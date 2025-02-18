@@ -26,7 +26,7 @@ app.get('/', function(req, res) {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (HATASIZ VE GÜNCELLENMİŞ)**
+// ✅ **BOTD TEST ROUTE (KESİN ÇALIŞAN YÖNTEM)**
 app.get('/botd-test', async (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -35,7 +35,6 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
-            <script src="https://fpjscdn.net/v3/BotD.min.js" defer></script>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
@@ -44,18 +43,22 @@ app.get('/botd-test', async (req, res) => {
             <script>
                 async function detectBot() {
                     try {
-                        if (!window.BotD) {
-                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
-                            return;
+                        // FingerprintJS BotD API kullanarak bot tespiti yapıyoruz
+                        const response = await fetch("https://botd.fpapi.io/api/v1/identify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({}),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("BotD API'ye bağlanırken hata oluştu.");
                         }
 
-                        // BotD'yi yükleyip tespiti çalıştır
-                        const botd = await window.BotD.load();
-                        const result = await botd.detect();
-
+                        const result = await response.json();
                         console.log("Bot Detection Result:", result);
-                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
-                        alert('Bot Detected: ' + result.bot);
+
+                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot.result;
+                        alert('Bot Detected: ' + result.bot.result);
                     } catch (error) {
                         console.error("❌ BotD hata verdi:", error);
                         document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
