@@ -26,7 +26,7 @@ app.get('/', function(req, res) {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (HATASIZ & SON SÜRÜM)**
+// ✅ **BOTD TEST ROUTE (HATASIZ VE GÜNCELLENMİŞ)**
 app.get('/botd-test', async (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -35,12 +35,22 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
-            <script type="module">
-                import { Botd } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
-                
+            <script src="https://fpjscdn.net/v3/BotD.min.js" defer></script>
+        </head>
+        <body>
+            <h1>Bot Detection Test</h1>
+            <p>Bot tespit süreci başladı...</p>
+            <p id="result">Lütfen bekleyin...</p>
+            <script>
                 async function detectBot() {
                     try {
-                        const botd = await Botd.load();
+                        if (!window.BotD) {
+                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
+                            return;
+                        }
+
+                        // BotD'yi yükleyip tespiti çalıştır
+                        const botd = await window.BotD.load();
                         const result = await botd.detect();
 
                         console.log("Bot Detection Result:", result);
@@ -53,11 +63,6 @@ app.get('/botd-test', async (req, res) => {
                 }
                 detectBot();
             </script>
-        </head>
-        <body>
-            <h1>Bot Detection Test</h1>
-            <p>Bot tespit süreci başladı...</p>
-            <p id="result">Lütfen bekleyin...</p>
         </body>
         </html>
     `);
