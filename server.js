@@ -26,7 +26,7 @@ app.get('/', function(req, res) {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE EKLENDİ**
+// ✅ **BOTD TEST ROUTE (HATA DÜZELTİLDİ)**
 app.get('/botd-test', async (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -35,15 +35,16 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
+            <script src="https://openfpcdn.io/botd/v0"></script>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
+            <p>Bot tespit süreci başladı...</p>
             <script>
                 async function detectBot() {
-                    const { Botd } = await import('https://cdn.jsdelivr.net/npm/@fingerprintjs/botd');
-                    const botd = await Botd.load();
+                    const botd = window.botd;
                     const result = await botd.detect();
-                    console.log(result);
+                    console.log("Bot Detection Result:", result);
                     alert('Bot Detected: ' + result.bot);
                 }
                 detectBot();
