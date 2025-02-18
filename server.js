@@ -35,7 +35,6 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
-            <script async src="https://openfpcdn.io/botd/v0"></script>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
@@ -44,18 +43,21 @@ app.get('/botd-test', async (req, res) => {
             <script>
                 async function detectBot() {
                     try {
-                        if (!window.botd) {
-                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
-                            return;
+                        const response = await fetch("https://botd.fpapi.io/api/v1/identify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({}),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("BotD API'ye bağlanırken hata oluştu.");
                         }
 
-                        // BotD'yi yükleyip tespiti çalıştır
-                        const botd = await window.botd.load();
-                        const result = await botd.detect();
-
+                        const result = await response.json();
                         console.log("Bot Detection Result:", result);
-                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
-                        alert('Bot Detected: ' + result.bot);
+
+                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot.result;
+                        alert('Bot Detected: ' + result.bot.result);
                     } catch (error) {
                         console.error("❌ BotD hata verdi:", error);
                         document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
@@ -84,5 +86,5 @@ app.post('/ingredients', function(req, res) {
 // ✅ **PORT AYARI GÜNCELLENDİ**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(\`Server is running on port \${PORT}\`);
 });
