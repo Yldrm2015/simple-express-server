@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch'); // Eksik modülü ekledik
+const fetch = require('node-fetch'); // Eksik modül çözüldü
 const app = express();
 
 // Allow all requests from all domains & localhost
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (HATASIZ VE OPTİMİZE)**
+// ✅ **BOTD TEST ROUTE (HATASIZ)**
 app.get('/botd-test', async (req, res) => {
     try {
         const response = await fetch("https://botd.fpapi.io/api/v1/identify", {
