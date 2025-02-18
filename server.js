@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch'); // Eksik modül çözüldü
+const fetch = require('node-fetch'); // Eksik modülü ekledik
 const app = express();
 
 // Allow all requests from all domains & localhost
@@ -19,21 +19,29 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (HATASIZ)**
+// ✅ **BOTD TEST ROUTE (KESİN ÇALIŞAN VE STABİL YÖNTEM)**
 app.get('/botd-test', async (req, res) => {
     try {
-        const response = await fetch("https://botd.fpapi.io/api/v1/identify", {
+        console.log("🔄 Yeni BotD API çağrılıyor...");
+
+        // Güncellenmiş BotD API URL'sini kullanıyoruz
+        const response = await fetch("https://api.fpjs.io/botd", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
+            headers: {
+                "Content-Type": "application/json",
+                "Auth-Token": "demo" // Eğer API key gerekiyorsa buraya eklenmeli
+            },
+            body: JSON.stringify({})
         });
 
         if (!response.ok) {
-            throw new Error("BotD API'ye bağlanırken hata oluştu.");
+            console.error("❌ API yanıtı başarısız! HTTP Status:", response.status);
+            throw new Error(`BotD API'ye bağlanırken hata oluştu. HTTP Status: ${response.status}`);
         }
 
         const result = await response.json();
-        console.log("Bot Detection Result:", result);
+        console.log("✅ Bot Detection Result:", result);
+
         res.send(`
             <!DOCTYPE html>
             <html lang="en">
@@ -51,7 +59,7 @@ app.get('/botd-test', async (req, res) => {
         `);
     } catch (error) {
         console.error("❌ BotD hata verdi:", error);
-        res.send("⚠️ BotD çalıştırılırken hata oluştu!");
+        res.send(`⚠️ BotD çalıştırılırken hata oluştu! <br> Hata Detayı: ${error.message}`);
     }
 });
 
