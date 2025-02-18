@@ -21,12 +21,12 @@ var ingredients = [
     { "id": "ppo3j3", "text": "Frog Legs" }
 ];
 
-// ✅ **ANA ROUTE EKLENDİ**
+// ✅ **ANA SAYFA ROUTE (BOTD TEST LİNKİ EKLENDİ)**
 app.get('/', function(req, res) {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (HATA DÜZELTİLDİ)**
+// ✅ **BOTD TEST ROUTE (HATASIZ & GÜNCELLENMİŞ)**
 app.get('/botd-test', async (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -40,12 +40,25 @@ app.get('/botd-test', async (req, res) => {
         <body>
             <h1>Bot Detection Test</h1>
             <p>Bot tespit süreci başladı...</p>
+            <p id="result">Lütfen bekleyin...</p>
             <script>
                 async function detectBot() {
-                    const botd = window.botd;
-                    const result = await botd.detect();
-                    console.log("Bot Detection Result:", result);
-                    alert('Bot Detected: ' + result.bot);
+                    try {
+                        // Eğer BotD kütüphanesi yüklenmemişse hata verdir.
+                        if (!window.botd) {
+                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
+                            return;
+                        }
+                        // BotD ile bot tespiti yap
+                        const botd = window.botd;
+                        const result = await botd.detect();
+                        console.log("Bot Detection Result:", result);
+                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
+                        alert('Bot Detected: ' + result.bot);
+                    } catch (error) {
+                        console.error("❌ BotD hata verdi:", error);
+                        document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
+                    }
                 }
                 detectBot();
             </script>
