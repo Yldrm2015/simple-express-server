@@ -1,6 +1,5 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch'); // Eksik modülü ekledik
 const app = express();
 
 // Allow all requests from all domains & localhost
@@ -19,50 +18,40 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (API KEY İLE ÇALIŞAN)**
+// ✅ **BOTD TEST ROUTE (CDN ÜZERİNDEN ÇALIŞAN VERSİYON)**
 app.get('/botd-test', async (req, res) => {
-    try {
-        console.log("🔄 BotD API çağrılıyor...");
-
-        // 👉 **BURAYA KENDİ API KEY'İNİ YAZ**
-        const API_KEY = "YOUR_API_KEY_HERE"; 
-
-        const response = await fetch("https://api.fpjs.io/botd", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Auth-Token": API_KEY 
-            },
-            body: JSON.stringify({})
-        });
-
-        if (!response.ok) {
-            console.error("❌ API yanıtı başarısız! HTTP Status:", response.status);
-            throw new Error(`BotD API'ye bağlanırken hata oluştu. HTTP Status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("✅ Bot Detection Result:", result);
-
-        res.send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Bot Detection</title>
-            </head>
-            <body>
-                <h1>Bot Detection Test</h1>
-                <p>Bot Detected: ${result.bot.result}</p>
-                <p>Details: ${JSON.stringify(result, null, 2)}</p>
-            </body>
-            </html>
-        `);
-    } catch (error) {
-        console.error("❌ BotD hata verdi:", error);
-        res.send(`⚠️ BotD çalıştırılırken hata oluştu! <br> Hata Detayı: ${error.message}`);
-    }
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bot Detection</title>
+            <script async src="https://cdn.jsdelivr.net/npm/@fingerprintjs/botd"></script>
+        </head>
+        <body>
+            <h1>Bot Detection Test</h1>
+            <p id="result">Lütfen bekleyin...</p>
+            <script>
+                async function detectBot() {
+                    try {
+                        if (!window.botd) {
+                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
+                            return;
+                        }
+                        const botd = await window.botd.load();
+                        const result = await botd.detect();
+                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
+                    } catch (error) {
+                        console.error("❌ BotD hata verdi:", error);
+                        document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
+                    }
+                }
+                detectBot();
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 // **Mevcut API endpointleri**
