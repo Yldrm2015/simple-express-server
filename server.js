@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (DOĞRU ÇALIŞAN VERSİYON)**
+// ✅ **BOTD TEST ROUTE (ESM FORMATLI KESİN ÇALIŞAN YÖNTEM)**
 app.get('/botd-test', async (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -27,19 +27,16 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
-            <script async src="https://openfpcdn.io/botd/v0"></script>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
-            <script>
+            <script type="module">
+                import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
+                
                 async function detectBot() {
                     try {
-                        if (!window.botd) {
-                            document.getElementById("result").innerText = "❌ BotD yüklenemedi!";
-                            return;
-                        }
-                        const botd = await window.botd.load();
+                        const botd = await load();
                         const result = await botd.detect();
                         document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
                     } catch (error) {
