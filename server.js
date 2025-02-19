@@ -19,17 +19,19 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (KESİN ÇALIŞAN VE STABİL YÖNTEM)**
+// ✅ **BOTD TEST ROUTE (API KEY İLE ÇALIŞAN)**
 app.get('/botd-test', async (req, res) => {
     try {
-        console.log("🔄 Yeni BotD API çağrılıyor...");
+        console.log("🔄 BotD API çağrılıyor...");
 
-        // Güncellenmiş BotD API URL'sini kullanıyoruz
+        // 👉 **BURAYA KENDİ API KEY'İNİ YAZ**
+        const API_KEY = "YOUR_API_KEY_HERE"; 
+
         const response = await fetch("https://api.fpjs.io/botd", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Auth-Token": "demo" // Eğer API key gerekiyorsa buraya eklenmeli
+                "Auth-Token": API_KEY 
             },
             body: JSON.stringify({})
         });
