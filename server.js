@@ -1,10 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const requestIp = require('request-ip');
+const requestIp = require('request-ip'); // ✅ Eksik modül eklendi
 
-const app = express(); // ✅ Express başlatıldı
+const app = express();
 
-// 🔥 **CORS Politikası (Her Yer Erişebilsin)**
+// Allow all requests from all domains & localhost
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -15,34 +15,31 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// ✅ **ANA SAYFA ROUTE**
+// ✅ **ANA SAYFA ROUTE (BOTD TEST LİNKİ EKLENDİ)**
 app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (Senin IP, Tarayıcı, Gizli Mod, Headless Mod Bilgilerini Gösterir)**
+// ✅ **BOTD TEST ROUTE (IP, Tarayıcı ve Gizli Mod Bilgileriyle)**
 app.get('/botd-test', async (req, res) => {
-    // 🌍 **Gerçek IP Adresini Çekme**
-    const ipAddress = requestIp.getClientIp(req);
-
-    // 🌐 **Tarayıcı Bilgisini Çekme**
-    const userAgent = req.headers['user-agent'];
+    const clientIp = requestIp.getClientIp(req); // ✅ Gerçek IP adresini al
+    const userAgent = req.headers['user-agent'] || 'Bilinmiyor'; // ✅ Kullanıcı Tarayıcı Bilgisi
+    const isIncognito = req.headers['sec-ch-ua'] ? 'Hayır' : 'Evet'; // ✅ Gizli Mod Tespiti
 
     res.send(`
         <!DOCTYPE html>
-        <html lang="tr">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
         </head>
         <body>
-            <h1>🌍 Bot Detection Test</h1>
-            <p><strong>✅ Senin Gerçek IP Adresin:</strong> ${ipAddress}</p>
-            <p><strong>✅ Tarayıcı Bilgin:</strong> ${userAgent}</p>
-            <p id="incognito-status"><strong>✅ Gizli Mod:</strong> Kontrol ediliyor...</p>
-            <p id="headless-status"><strong>✅ Headless Mode:</strong> Kontrol ediliyor...</p>
-
+            <h1>Bot Detection Test</h1>
+            <p id="result">Lütfen bekleyin...</p>
+            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
+            <p><strong>IP Adresi:</strong> ${clientIp}</p>
+            <p><strong>Gizli Mod:</strong> ${isIncognito}</p>
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
 
@@ -57,42 +54,6 @@ app.get('/botd-test', async (req, res) => {
                     }
                 }
                 detectBot();
-
-                // 🔍 **Gizli Mod (Incognito) Kontrolü**
-                function checkIncognitoMode() {
-                    const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
-                    if (!fs) {
-                        document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Algılanamadı";
-                    } else {
-                        fs(window.TEMPORARY, 100, 
-                            function() { document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Hayır"; },
-                            function() { document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Evet"; }
-                        );
-                    }
-
-                    // **Ekstra Gizli Mod Algılama**
-                    const isPrivate = (function() {
-                        try {
-                            localStorage.setItem("test", "1");
-                            localStorage.removeItem("test");
-                            return false;
-                        } catch (e) {
-                            return true;
-                        }
-                    })();
-                    if (isPrivate) {
-                        document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Evet";
-                    }
-                }
-                checkIncognitoMode();
-
-                // 🔍 **Headless Tarayıcı Kontrolü**
-                function checkHeadlessMode() {
-                    const isHeadless = /HeadlessChrome/.test(window.navigator.userAgent) || 
-                                      (navigator.webdriver === true);
-                    document.getElementById("headless-status").innerText = "✅ Headless Mode: " + (isHeadless ? "Evet" : "Hayır");
-                }
-                checkHeadlessMode();
             </script>
         </body>
         </html>
