@@ -32,32 +32,49 @@ app.get('/botd-test', async (req, res) => {
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
-            <p id="browser-info"><strong>Tarayıcı Bilgisi:</strong> Yükleniyor...</p>
-            <p id="ip-info"><strong>IP Adresi:</strong> Yükleniyor...</p>
-            <p id="incognito-info"><strong>Gizli Mod:</strong> Yükleniyor...</p>
+            <p id="browser-info"><strong>📌 Tarayıcı Bilgisi:</strong> Yükleniyor...</p>
+            <p id="ip-info"><strong>🌍 IP Adresi:</strong> Yükleniyor...</p>
+            <p id="incognito-info"><strong>🔒 Gizli Mod:</strong> Yükleniyor...</p>
+
             <script type="module">
-                import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
-
-                async function detectBot() {
+                async function detectInfo() {
                     try {
-                        const botd = await load();
-                        const result = await botd.detect();
-                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
-
-                        // Tarayıcı ve sistem bilgilerini çek
+                        // ✅ Tarayıcı bilgilerini alalım
                         document.getElementById("browser-info").innerText = '📌 Tarayıcı Bilgisi: ' + navigator.userAgent;
-                        document.getElementById("incognito-info").innerText = '🔒 Gizli Mod: ' + (result.incognito ? 'Evet' : 'Hayır');
 
-                        // ✅ IP adresini BotD üzerinden al
-                        const ipResponse = await fetch('https://api.fpjs.io/', { method: 'GET' });
-                        const ipData = await ipResponse.json();
-                        document.getElementById("ip-info").innerText = '🌍 IP Adresi: ' + ipData.ip;
+                        // ✅ IP adresini almak için alternatif API kullanalım
+                        try {
+                            const ipResponse = await fetch('https://api64.ipify.org?format=json');
+                            const ipData = await ipResponse.json();
+                            document.getElementById("ip-info").innerText = '🌍 IP Adresi: ' + ipData.ip;
+                        } catch (ipError) {
+                            document.getElementById("ip-info").innerText = '⚠️ IP Adresi Alınamadı!';
+                        }
+
+                        // ✅ **Gizli mod kontrolü**
+                        let fs = window.RequestFileSystem || window.webkitRequestFileSystem;
+                        let isIncognito = false;
+                        if (!fs) {
+                            isIncognito = false;  // Tarayıcı desteklemiyorsa
+                        } else {
+                            fs(window.TEMPORARY, 100, () => isIncognito = false, () => isIncognito = true);
+                        }
+                        document.getElementById("incognito-info").innerText = '🔒 Gizli Mod: ' + (isIncognito ? 'Evet' : 'Hayır');
+
+                        // ✅ **BotD ile bot tespiti**
+                        try {
+                            const { load } = await import('https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm');
+                            const botd = await load();
+                            const result = await botd.detect();
+                            document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
+                        } catch (botdError) {
+                            document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
+                        }
                     } catch (error) {
-                        console.error("❌ BotD hata verdi:", error);
-                        document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
+                        console.error("❌ Genel hata:", error);
                     }
                 }
-                detectBot();
+                detectInfo();
             </script>
         </body>
         </html>
