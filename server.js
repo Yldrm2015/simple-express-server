@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const requestIp = require("request-ip");
 const useragent = require("useragent");
 const cors = require("cors");
+const fetch = require("node-fetch");
 
 const app = express();
 
@@ -31,6 +32,32 @@ app.get("/", (req, res) => {
     res.send("✅ Server is running! Test için: <a href='/botd-test'>/botd-test</a>");
 });
 
+// ✅ **Gerçek IP Adresini Alma**
+app.get("/get-ip", async (req, res) => {
+    let localIP = req.headers["x-forwarded-for"] || requestIp.getClientIp(req);
+
+    if (localIP && localIP.includes(",")) {
+        localIP = localIP.split(",")[0]; // Eğer birden fazla IP varsa, ilkini al
+    }
+
+    // **Harici API ile Gerçek IP Al**
+    const externalIP = await getExternalIP();
+
+    res.json({ localIP, externalIP });
+});
+
+// **Harici API ile Gerçek IP Alma**
+async function getExternalIP() {
+    try {
+        const response = await fetch("https://api64.ipify.org?format=json");
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error("❌ Harici IP alınamadı:", error);
+        return "IP alınamadı!";
+    }
+}
+
 // ✅ **Bot Tespiti, Tarayıcı Tespiti ve IP Adresi Alma**
 app.get("/botd-test", async (req, res) => {
     try {
@@ -38,8 +65,9 @@ app.get("/botd-test", async (req, res) => {
         const agent = useragent.parse(req.headers["user-agent"]);
         console.log("📌 Kullanıcı Tarayıcısı:", agent.toString());
 
-        // Kullanıcının IP adresini al
-        const ipAddress = requestIp.getClientIp(req);
+        // Kullanıcının IP adreslerini al
+        const localIP = req.headers["x-forwarded-for"] || requestIp.getClientIp(req);
+        const externalIP = await getExternalIP();
 
         res.send(`
             <!DOCTYPE html>
@@ -53,7 +81,8 @@ app.get("/botd-test", async (req, res) => {
                 <h1>Bot Detection Test</h1>
                 <p id="result">Lütfen bekleyin...</p>
                 <p><strong>Tarayıcı:</strong> <span id="browser-info">Tespit ediliyor...</span></p>
-                <p><strong>IP Adresiniz:</strong> <span id="ip-info">${ipAddress}</span></p>
+                <p><strong>Yerel IP:</strong> <span id="local-ip">${localIP}</span></p>
+                <p><strong>Gerçek IP:</strong> <span id="external-ip">${externalIP}</span></p>
 
                 <script type="module">
                     // ✅ Tarayıcı Tespiti (Chrome, Brave, Yandex, Edge vs.)
