@@ -1,3 +1,27 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const requestIp = require('request-ip');
+const useragent = require('useragent');
+
+const app = express(); // ✅ **Eksik tanımlama eklendi** (Sunucu objesi)
+
+// CORS izinleri
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Methods", "POST, GET");
+    next();
+});
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// **Ana Sayfa Route**
+app.get('/', (req, res) => {
+    res.send('✅ Server is running! You can test Browser Detection at <a href="/botd-test">/botd-test</a>');
+});
+
+// ✅ **Bot Detection + Tarayıcı Tespiti**
 app.get('/botd-test', async (req, res) => {
     const agent = useragent.parse(req.headers['user-agent']); // Kullanıcı tarayıcı bilgisi
     const browserName = agent.family; // Tarayıcı ismi (Chrome, Firefox, Edge vb.)
@@ -40,4 +64,10 @@ app.get('/botd-test', async (req, res) => {
         </body>
         </html>
     `);
+});
+
+// ✅ **Sunucuyu Başlat**
+const PORT = process.env.PORT || 6069;
+app.listen(PORT, () => {
+    console.log(`✅ Server is running on port ${PORT}`);
 });
