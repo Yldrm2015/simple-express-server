@@ -40,7 +40,12 @@ app.get('/botd-test', async (req, res) => {
                 async function detectInfo() {
                     try {
                         // ✅ Tarayıcı bilgilerini alalım
-                        document.getElementById("browser-info").innerText = '📌 Tarayıcı Bilgisi: ' + navigator.userAgent;
+                        let browserInfo = navigator.userAgent;
+                        if (navigator.userAgentData) {
+                            const uaData = await navigator.userAgentData.getHighEntropyValues(["platform", "platformVersion", "architecture", "model"]);
+                            browserInfo = \`${navigator.userAgentData.platform} - ${uaData.platformVersion} (${uaData.architecture || "Unknown"})\`;
+                        }
+                        document.getElementById("browser-info").innerText = '📌 Tarayıcı Bilgisi: ' + browserInfo;
 
                         // ✅ IP adresini almak için alternatif API kullanalım
                         try {
@@ -51,15 +56,46 @@ app.get('/botd-test', async (req, res) => {
                             document.getElementById("ip-info").innerText = '⚠️ IP Adresi Alınamadı!';
                         }
 
-                        // ✅ **Gizli mod kontrolü**
-                        let fs = window.RequestFileSystem || window.webkitRequestFileSystem;
-                        let isIncognito = false;
-                        if (!fs) {
-                            isIncognito = false;  // Tarayıcı desteklemiyorsa
-                        } else {
-                            fs(window.TEMPORARY, 100, () => isIncognito = false, () => isIncognito = true);
+                        // ✅ **Gizli mod kontrolü (Farklı yöntemlerle)**
+                        async function isIncognito() {
+                            return new Promise(resolve => {
+                                let fs = window.RequestFileSystem || window.webkitRequestFileSystem;
+                                if (!fs) {
+                                    resolve(false);  // Tarayıcı desteklemiyorsa normal modda sayarız
+                                } else {
+                                    fs(window.TEMPORARY, 100, () => resolve(false), () => resolve(true));
+                                }
+                            });
                         }
-                        document.getElementById("incognito-info").innerText = '🔒 Gizli Mod: ' + (isIncognito ? 'Evet' : 'Hayır');
+
+                        async function detectIncognito() {
+                            let incognito = false;
+
+                            // Yöntem 1: Storage kontrolü
+                            if (navigator.storage && navigator.storage.estimate) {
+                                const { quota } = await navigator.storage.estimate();
+                                if (quota < 120000000) { // 120MB'tan az ise gizli mod olabilir
+                                    incognito = true;
+                                }
+                            }
+
+                            // Yöntem 2: IndexedDB Kontrolü
+                            try {
+                                let db = indexedDB.open("test");
+                                db.onerror = () => { incognito = true; };
+                                db.onsuccess = () => { incognito = false; };
+                            } catch (e) {
+                                incognito = true;
+                            }
+
+                            // Yöntem 3: FileSystem API ile kontrol
+                            const fsCheck = await isIncognito();
+                            if (fsCheck) incognito = true;
+
+                            document.getElementById("incognito-info").innerText = '🔒 Gizli Mod: ' + (incognito ? 'Evet' : 'Hayır');
+                        }
+
+                        await detectIncognito();
 
                         // ✅ **BotD ile bot tespiti**
                         try {
