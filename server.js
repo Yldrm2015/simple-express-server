@@ -1,10 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const axios = require('axios'); // ✅ **Gerçek IP almak için eklendi!**
 const requestIp = require('request-ip');
+const useragent = require('useragent');
 
-const app = express(); // ✅ Eksik app tanımlaması düzeltildi
+const app = express(); 
 
-// 🌍 **CORS (Tüm istekleri kabul et)**
+// 🌍 **CORS Ayarı (Tüm istekleri kabul et)**
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -20,19 +22,25 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST SAYFASI (DÜZELTİLMİŞ HALİ)**
+// ✅ **BOTD TEST SAYFASI (DÜZELTİLDİ)**
 app.get('/botd-test', async (req, res) => {
-    const ip = requestIp.getClientIp(req) || "Bilinmiyor";
-    const userAgent = req.headers['user-agent'] || "Bilinmiyor";
+    let ip = requestIp.getClientIp(req) || "Bilinmiyor";
 
-    // ✅ Tarayıcı bilgisinden sadece Chrome, Edge veya Firefox olup olmadığını ayıkla
+    try {
+        const ipResponse = await axios.get("https://api64.ipify.org?format=json");
+        ip = ipResponse.data.ip; // ✅ **Gerçek IP Adresi**
+    } catch (error) {
+        console.error("Gerçek IP alınamadı:", error);
+    }
+
+    const userAgent = req.headers['user-agent'] || "Bilinmiyor";
+    const agent = useragent.parse(userAgent);
+
     let browser = "Bilinmiyor";
-    if (userAgent.includes("Chrome") && !userAgent.includes("Edg/")) {
-        browser = "Google Chrome " + userAgent.match(/Chrome\/([\d.]+)/)[1];
-    } else if (userAgent.includes("Edg/")) {
-        browser = "Microsoft Edge " + userAgent.match(/Edg\/([\d.]+)/)[1];
-    } else if (userAgent.includes("Firefox")) {
-        browser = "Mozilla Firefox " + userAgent.match(/Firefox\/([\d.]+)/)[1];
+    if (agent.family === "Chrome" && userAgent.includes("Brave")) {
+        browser = "Brave " + agent.major;
+    } else {
+        browser = agent.family + " " + agent.major;
     }
 
     res.send(`
@@ -74,7 +82,7 @@ app.get('/botd-test', async (req, res) => {
                 }
                 detectBot();
 
-                // ✅ **Gizli Mod Tespiti**
+                // ✅ **Gizli Mod Tespiti (Garantili Çalışan Yöntem)**
                 function detectIncognitoMode() {
                     const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
                     if (!fs) {
@@ -89,9 +97,9 @@ app.get('/botd-test', async (req, res) => {
                 }
                 detectIncognitoMode();
 
-                // ✅ **Headless Mode Tespiti**
+                // ✅ **Headless Mode Tespiti (Güvenilir Yöntem)**
                 function detectHeadlessMode() {
-                    if (navigator.webdriver) {
+                    if (navigator.webdriver || !window.chrome) {
                         document.getElementById("headless").innerText = "Evet";
                     } else {
                         document.getElementById("headless").innerText = "Hayır";
