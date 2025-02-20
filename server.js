@@ -2,8 +2,17 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const requestIp = require('request-ip');
 const useragent = require('useragent');
+const { execSync } = require("child_process");
 
-const app = express(); // Express sunucusunu başlat
+const app = express();
+
+// ✅ Eksik modülleri yükleyen komut
+try {
+    console.log("📦 Modüller yükleniyor...");
+    execSync("npm install", { stdio: "inherit" });
+} catch (error) {
+    console.error("🚨 Modül yükleme hatası:", error);
+}
 
 // CORS izinleri
 app.use((req, res, next) => {
@@ -24,6 +33,7 @@ app.get('/', (req, res) => {
 // ✅ **Tarayıcı Tespiti Route**
 app.get('/browser-test', (req, res) => {
     const agent = useragent.parse(req.headers['user-agent']); // Kullanıcı tarayıcı bilgisi
+    const ip = requestIp.getClientIp(req) || "IP tespit edilemedi"; // IP adresini al
 
     res.send(`
         <!DOCTYPE html>
@@ -37,6 +47,7 @@ app.get('/browser-test', (req, res) => {
             <h1>Tarayıcı Tespiti</h1>
             <p><strong>Tarayıcı:</strong> ${agent.family} ${agent.major}</p>
             <p><strong>Detaylı Tarayıcı Bilgisi:</strong> ${req.headers['user-agent']}</p>
+            <p><strong>IP Adresi:</strong> ${ip}</p>
         </body>
         </html>
     `);
