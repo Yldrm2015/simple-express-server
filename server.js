@@ -15,30 +15,19 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// ✅ **IP ve Tarayıcı Bilgilerini Getiren Route**
-app.get('/bot-info', (req, res) => {
-    const ip = requestIp.getClientIp(req) || "Bilinmiyor";
-    const userAgent = req.headers['user-agent'] || "Bilinmiyor";
-    const referer = req.headers['referer'] || "Bilinmiyor";
-
-    res.json({
-        message: "Tarayıcı ve IP bilgileri alındı.",
-        ip_address: ip,
-        user_agent: userAgent,
-        referer: referer
-    });
-});
-
 // ✅ **Ana Sayfa Route**
 app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST SAYFASI**
+// ✅ **BOTD TEST SAYFASI (DÜZELTİLMİŞ HALİ)**
 app.get('/botd-test', async (req, res) => {
+    const ip = requestIp.getClientIp(req) || "Bilinmiyor";
+    const userAgent = req.headers['user-agent'] || "Bilinmiyor";
+
     res.send(`
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="tr">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,6 +36,11 @@ app.get('/botd-test', async (req, res) => {
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
+            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
+            <p><strong>IP Adresi:</strong> ${ip}</p>
+            <p><strong>Gizli Mod:</strong> <span id="incognito">Tespit ediliyor...</span></p>
+            <p><strong>Headless Mode:</strong> <span id="headless">Tespit ediliyor...</span></p>
+
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
                 
@@ -61,6 +55,31 @@ app.get('/botd-test', async (req, res) => {
                     }
                 }
                 detectBot();
+
+                // ✅ **Gizli Mod Tespiti**
+                function detectIncognitoMode() {
+                    const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
+                    if (!fs) {
+                        document.getElementById("incognito").innerText = "Bilinmiyor";
+                        return;
+                    }
+                    fs(window.TEMPORARY, 100, () => {
+                        document.getElementById("incognito").innerText = "Hayır";
+                    }, () => {
+                        document.getElementById("incognito").innerText = "Evet";
+                    });
+                }
+                detectIncognitoMode();
+
+                // ✅ **Headless Mode Tespiti**
+                function detectHeadlessMode() {
+                    if (navigator.webdriver) {
+                        document.getElementById("headless").innerText = "Evet";
+                    } else {
+                        document.getElementById("headless").innerText = "Hayır";
+                    }
+                }
+                detectHeadlessMode();
             </script>
         </body>
         </html>
