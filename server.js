@@ -14,33 +14,34 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// ✅ **ANA SAYFA ROUTE (BOTD TEST LİNKİ EKLENDİ)**
+// ✅ **ANA SAYFA ROUTE**
 app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (Gelişmiş bot tespiti)**
+// ✅ **BOTD TEST ROUTE (Senin IP, Tarayıcı ve Gizli Mod Bilgilerini Gösterir)**
 app.get('/botd-test', async (req, res) => {
-    // Kullanıcının tarayıcı bilgilerini al
-    const userAgent = req.headers['user-agent'];
+    // **IP Adresi Çekme (Gerçek Kullanıcı IP'sini Alır)**
     const ipList = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const ipAddress = Array.isArray(ipList) ? ipList[0] : ipList; // IP adresi seçildi
+    const ipAddress = Array.isArray(ipList) ? ipList[0] : ipList; // Gerçek IP Adresini Seç
+
+    // **Tarayıcı Bilgisini Çekme**
+    const userAgent = req.headers['user-agent'];
 
     res.send(`
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="tr">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
         </head>
         <body>
-            <h1>Bot Detection Test</h1>
-            <p id="result">Lütfen bekleyin...</p>
-            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
-            <p><strong>IP Adresi:</strong> ${ipAddress}</p>
-            <p id="incognito-status">Gizli Mod: Kontrol ediliyor...</p>
-            <p id="headless-status">Headless Mode: Kontrol ediliyor...</p>
+            <h1>🌍 Bot Detection Test</h1>
+            <p><strong>✅ Senin IP Adresin:</strong> ${ipAddress}</p>
+            <p><strong>✅ Tarayıcı Bilgin:</strong> ${userAgent}</p>
+            <p id="incognito-status"><strong>✅ Gizli Mod:</strong> Kontrol ediliyor...</p>
+            <p id="headless-status"><strong>✅ Headless Mode:</strong> Kontrol ediliyor...</p>
 
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
@@ -61,15 +62,15 @@ app.get('/botd-test', async (req, res) => {
                 function checkIncognitoMode() {
                     const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
                     if (!fs) {
-                        document.getElementById("incognito-status").innerText = "Gizli Mod: Algılanamadı";
+                        document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Algılanamadı";
                     } else {
                         fs(window.TEMPORARY, 100, 
-                            function() { document.getElementById("incognito-status").innerText = "Gizli Mod: Hayır"; },
-                            function() { document.getElementById("incognito-status").innerText = "Gizli Mod: Evet"; }
+                            function() { document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Hayır"; },
+                            function() { document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Evet"; }
                         );
                     }
 
-                    // **Gizli mod için ek tespit yöntemi**  
+                    // **Ekstra Gizli Mod Algılama**
                     const isPrivate = (function() {
                         try {
                             localStorage.setItem("test", "1");
@@ -80,7 +81,7 @@ app.get('/botd-test', async (req, res) => {
                         }
                     })();
                     if (isPrivate) {
-                        document.getElementById("incognito-status").innerText = "Gizli Mod: Evet";
+                        document.getElementById("incognito-status").innerText = "✅ Gizli Mod: Evet";
                     }
                 }
                 checkIncognitoMode();
@@ -89,7 +90,7 @@ app.get('/botd-test', async (req, res) => {
                 function checkHeadlessMode() {
                     const isHeadless = /HeadlessChrome/.test(window.navigator.userAgent) || 
                                       (navigator.webdriver === true);
-                    document.getElementById("headless-status").innerText = "Headless Mode: " + (isHeadless ? "Evet" : "Hayır");
+                    document.getElementById("headless-status").innerText = "✅ Headless Mode: " + (isHeadless ? "Evet" : "Hayır");
                 }
                 checkHeadlessMode();
             </script>
