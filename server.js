@@ -15,7 +15,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🚨 Sunucu Hatalarını Yakala
+// 🚨 Hata Yönetimi
 process.on("uncaughtException", (err) => {
     console.error("🚨 Uncaught Exception:", err);
 });
@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
     res.send("✅ Server is running! Test için: <a href='/botd-test'>/botd-test</a>");
 });
 
-// ✅ **Tarayıcı, Bot ve Gizli Mod Tespiti**
+// ✅ **Bot Tespiti, Tarayıcı Tespiti ve IP Adresi Alma**
 app.get("/botd-test", async (req, res) => {
     try {
         console.log("✅ Bot Detection başlatıldı...");
@@ -54,60 +54,55 @@ app.get("/botd-test", async (req, res) => {
                 <p id="result">Lütfen bekleyin...</p>
                 <p><strong>Tarayıcı:</strong> <span id="browser-info">Tespit ediliyor...</span></p>
                 <p><strong>IP Adresiniz:</strong> <span id="ip-info">${ipAddress}</span></p>
-                <p><strong>Gizli Modda mı?</strong> <span id="incognito">Kontrol ediliyor...</span></p>
 
-                <script>
+                <script type="module">
+                    // ✅ Tarayıcı Tespiti (Chrome, Brave, Yandex, Edge vs.)
+                    async function detectBrowser() {
+                        if (navigator.brave) {
+                            const isBrave = await navigator.brave.isBrave();
+                            if (isBrave) {
+                                document.getElementById("browser-info").innerText = "Brave 🦁";
+                                return;
+                            }
+                        }
+
+                        const userAgent = navigator.userAgent;
+                        if (userAgent.includes("Firefox")) {
+                            document.getElementById("browser-info").innerText = "Firefox 🦊";
+                        } else if (userAgent.includes("SamsungBrowser")) {
+                            document.getElementById("browser-info").innerText = "Samsung Internet 📱";
+                        } else if (userAgent.includes("Edg")) {
+                            document.getElementById("browser-info").innerText = "Microsoft Edge 🟦";
+                        } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
+                            document.getElementById("browser-info").innerText = "Opera 🎭";
+                        } else if (userAgent.includes("YaBrowser")) {
+                            document.getElementById("browser-info").innerText = "Yandex Browser 🚀";
+                        } else if (userAgent.includes("Vivaldi")) {
+                            document.getElementById("browser-info").innerText = "Vivaldi 🎼";
+                        } else if (userAgent.includes("Chrome")) {
+                            document.getElementById("browser-info").innerText = "Google Chrome 🌍";
+                        } else if (userAgent.includes("Safari")) {
+                            document.getElementById("browser-info").innerText = "Safari 🍏";
+                        } else {
+                            document.getElementById("browser-info").innerText = "Bilinmeyen Tarayıcı ❓";
+                        }
+                    }
+                    detectBrowser();
+
+                    // ✅ BOT TESPİTİ
                     async function detectBot() {
                         try {
-                            const response = await fetch("https://api64.ipify.org?format=json");
-                            const data = await response.json();
-                            document.getElementById("ip-info").innerText = data.ip;
+                            const botdModule = await import('https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm');
+                            const botd = await botdModule.load();
+                            const result = await botd.detect();
+
+                            document.getElementById("result").innerText = result.bot ? "🚨 BOT TESPİT EDİLDİ!" : "✅ İnsan Kullanıcı";
                         } catch (error) {
-                            document.getElementById("ip-info").innerText = "❌ IP tespit edilemedi!";
+                            console.error("❌ Bot Detection Hatası:", error);
+                            document.getElementById("result").innerText = "⚠️ Bot Detection Çalıştırılamadı!";
                         }
                     }
                     detectBot();
-
-                    // **📌 Tarayıcı Tespiti**
-                    function getBrowserInfo() {
-                        const userAgent = navigator.userAgent;
-                        const vendor = navigator.vendor;
-                        let browserName = "Bilinmiyor";
-
-                        if (userAgent.includes("Firefox")) {
-                            browserName = "Firefox";
-                        } else if (userAgent.includes("SamsungBrowser")) {
-                            browserName = "Samsung Internet";
-                        } else if (userAgent.includes("Edg")) {
-                            browserName = "Microsoft Edge";
-                        } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
-                            browserName = "Opera";
-                        } else if (userAgent.includes("Chrome")) {
-                            browserName = vendor.includes("Google") ? "Google Chrome" : "Chromium Tabanlı Tarayıcı";
-                        } else if (userAgent.includes("Safari")) {
-                            browserName = "Safari";
-                        }
-
-                        document.getElementById("browser-info").innerText = browserName;
-                    }
-                    getBrowserInfo();
-
-                    // **🕵️‍♂️ Gizli Mod Tespiti**
-                    async function isIncognito() {
-                        return new Promise((resolve) => {
-                            const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
-                            if (!fs) {
-                                resolve(false);
-                                return;
-                            }
-                            fs(window.TEMPORARY, 100, () => resolve(false), () => resolve(true));
-                        });
-                    }
-
-                    isIncognito().then(result => {
-                        document.getElementById("incognito").innerText = result ? "✅ Evet (Gizli Mod)" : "❌ Hayır (Normal Mod)";
-                    });
-
                 </script>
             </body>
             </html>
