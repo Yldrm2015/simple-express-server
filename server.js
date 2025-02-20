@@ -25,6 +25,16 @@ app.get('/botd-test', async (req, res) => {
     const ip = requestIp.getClientIp(req) || "Bilinmiyor";
     const userAgent = req.headers['user-agent'] || "Bilinmiyor";
 
+    // ✅ Tarayıcı bilgisinden sadece Chrome, Edge veya Firefox olup olmadığını ayıkla
+    let browser = "Bilinmiyor";
+    if (userAgent.includes("Chrome") && !userAgent.includes("Edg/")) {
+        browser = "Google Chrome " + userAgent.match(/Chrome\/([\d.]+)/)[1];
+    } else if (userAgent.includes("Edg/")) {
+        browser = "Microsoft Edge " + userAgent.match(/Edg\/([\d.]+)/)[1];
+    } else if (userAgent.includes("Firefox")) {
+        browser = "Mozilla Firefox " + userAgent.match(/Firefox\/([\d.]+)/)[1];
+    }
+
     res.send(`
         <!DOCTYPE html>
         <html lang="tr">
@@ -32,14 +42,21 @@ app.get('/botd-test', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #2c3e50; }
+                .info { margin: 10px 0; font-size: 18px; }
+                .success { color: green; font-weight: bold; }
+                .error { color: red; font-weight: bold; }
+            </style>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
-            <p id="result">Lütfen bekleyin...</p>
-            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
-            <p><strong>IP Adresi:</strong> ${ip}</p>
-            <p><strong>Gizli Mod:</strong> <span id="incognito">Tespit ediliyor...</span></p>
-            <p><strong>Headless Mode:</strong> <span id="headless">Tespit ediliyor...</span></p>
+            <p class="info"><strong>Bot Tespit Sonucu:</strong> <span id="result">Lütfen bekleyin...</span></p>
+            <p class="info"><strong>Tarayıcı:</strong> ${browser}</p>
+            <p class="info"><strong>IP Adresi:</strong> ${ip}</p>
+            <p class="info"><strong>Gizli Mod:</strong> <span id="incognito">Tespit ediliyor...</span></p>
+            <p class="info"><strong>Headless Mode:</strong> <span id="headless">Tespit ediliyor...</span></p>
 
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
@@ -48,7 +65,8 @@ app.get('/botd-test', async (req, res) => {
                     try {
                         const botd = await load();
                         const result = await botd.detect();
-                        document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
+                        document.getElementById("result").innerText = result.bot ? "✅ Evet, bot tespit edildi!" : "❌ Hayır, bot tespit edilmedi!";
+                        document.getElementById("result").className = result.bot ? "error" : "success";
                     } catch (error) {
                         console.error("❌ BotD hata verdi:", error);
                         document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
