@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const app = express(); // ✅ Eksik olan tanımlama eklendi
+const app = express(); // ✅ Express uygulaması başlatıldı
 
-// Allow all requests from all domains & localhost
+// 🌍 **CORS İzinleri (Güvenlik Ayarı)**
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -19,8 +19,12 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (ESM FORMATLI KESİN ÇALIŞAN YÖNTEM)**
+// ✅ **BOTD TEST ROUTE (Gelişmiş bot tespiti)**
 app.get('/botd-test', async (req, res) => {
+    // Kullanıcının tarayıcı bilgilerini al
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -32,9 +36,14 @@ app.get('/botd-test', async (req, res) => {
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
+            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
+            <p><strong>IP Adresi:</strong> ${ipAddress}</p>
+            <p id="incognito-status">Gizli Mod: Kontrol ediliyor...</p>
+            <p id="headless-status">Headless Mode: Kontrol ediliyor...</p>
+
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
-                
+
                 async function detectBot() {
                     try {
                         const botd = await load();
@@ -46,26 +55,31 @@ app.get('/botd-test', async (req, res) => {
                     }
                 }
                 detectBot();
+
+                // 🔍 **Gizli Mod (Incognito) Kontrolü**
+                function checkIncognitoMode() {
+                    const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
+                    if (!fs) {
+                        document.getElementById("incognito-status").innerText = "Gizli Mod: Algılanamadı";
+                    } else {
+                        fs(window.TEMPORARY, 100, 
+                            function() { document.getElementById("incognito-status").innerText = "Gizli Mod: Hayır"; },
+                            function() { document.getElementById("incognito-status").innerText = "Gizli Mod: Evet"; }
+                        );
+                    }
+                }
+                checkIncognitoMode();
+
+                // 🔍 **Headless Tarayıcı Kontrolü**
+                function checkHeadlessMode() {
+                    const isHeadless = /HeadlessChrome/.test(window.navigator.userAgent);
+                    document.getElementById("headless-status").innerText = "Headless Mode: " + (isHeadless ? "Evet" : "Hayır");
+                }
+                checkHeadlessMode();
             </script>
         </body>
         </html>
     `);
-});
-
-// **Mevcut API endpointleri**
-app.get('/ingredients', (req, res) => {
-    console.log("GET From SERVER");
-    res.send([
-        { "id": "234kjw", "text": "Eggs" },
-        { "id": "as82w", "text": "Milk" },
-        { "id": "234sk1", "text": "Bacon" },
-        { "id": "ppo3j3", "text": "Frog Legs" }
-    ]);
-});
-
-app.post('/ingredients', (req, res) => {
-    console.log(req.body);
-    res.status(200).send("Successfully posted ingredient");
 });
 
 // ✅ **PORT AYARI GÜNCELLENDİ**
