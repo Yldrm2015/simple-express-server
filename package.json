@@ -12,6 +12,6 @@
     "express": "^4.13.3",
     "body-parser": "^1.14.1",
     "request-ip": "^2.1.3",
-    "axios": "^1.6.5"  // ✅ **Buraya ekledik**
+    "axios": "^1.6.5"
   }
 }
