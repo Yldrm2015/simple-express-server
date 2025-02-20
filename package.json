@@ -1,7 +1,7 @@
 {
   "name": "simple-server",
   "version": "1.0.0",
-  "description": "A simple bot detection test server",
+  "description": "A bot detection and browser info server",
   "main": "server.js",
   "scripts": {
     "prestart": "npm install",
