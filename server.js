@@ -23,7 +23,8 @@ app.get('/', (req, res) => {
 app.get('/botd-test', async (req, res) => {
     // Kullanıcının tarayıcı bilgilerini al
     const userAgent = req.headers['user-agent'];
-    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ipList = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ipAddress = Array.isArray(ipList) ? ipList[0] : ipList; // IP adresi seçildi
 
     res.send(`
         <!DOCTYPE html>
@@ -67,12 +68,27 @@ app.get('/botd-test', async (req, res) => {
                             function() { document.getElementById("incognito-status").innerText = "Gizli Mod: Evet"; }
                         );
                     }
+
+                    // **Gizli mod için ek tespit yöntemi**  
+                    const isPrivate = (function() {
+                        try {
+                            localStorage.setItem("test", "1");
+                            localStorage.removeItem("test");
+                            return false;
+                        } catch (e) {
+                            return true;
+                        }
+                    })();
+                    if (isPrivate) {
+                        document.getElementById("incognito-status").innerText = "Gizli Mod: Evet";
+                    }
                 }
                 checkIncognitoMode();
 
                 // 🔍 **Headless Tarayıcı Kontrolü**
                 function checkHeadlessMode() {
-                    const isHeadless = /HeadlessChrome/.test(window.navigator.userAgent);
+                    const isHeadless = /HeadlessChrome/.test(window.navigator.userAgent) || 
+                                      (navigator.webdriver === true);
                     document.getElementById("headless-status").innerText = "Headless Mode: " + (isHeadless ? "Evet" : "Hayır");
                 }
                 checkHeadlessMode();
