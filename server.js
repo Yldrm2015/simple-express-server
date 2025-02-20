@@ -75,7 +75,7 @@ app.get('/botd-test', async (req, res) => {
             </html>
         `);
     } catch (error) {
-        console.error("🚨 Hata Oluştu:", error);
+        console.error("🚨 Sunucu Hatası! Logları Kontrol Et:", error);
         res.status(500).send("🚨 Sunucu Hatası! Logları Kontrol Et.");
     }
 });
