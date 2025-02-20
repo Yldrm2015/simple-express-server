@@ -18,45 +18,28 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 // ✅ **Ana Sayfa Route**
 app.get('/', (req, res) => {
-    res.send('✅ Server is running! You can test Browser Detection at <a href="/browser-test">/browser-test</a>');
+    res.send('✅ Server is running! You can test Bot & Browser Detection at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **Tarayıcı Tespiti Route**
-app.get('/browser-test', (req, res) => {
-    const agent = useragent.parse(req.headers['user-agent']); // Kullanıcı tarayıcı bilgisi
-    const ip = requestIp.getClientIp(req) || "IP tespit edilemedi"; // IP adresini al
-
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Tarayıcı Tespiti</title>
-        </head>
-        <body>
-            <h1>Tarayıcı Tespiti</h1>
-            <p><strong>Tarayıcı:</strong> ${agent.family} ${agent.major}</p>
-            <p><strong>Detaylı Tarayıcı Bilgisi:</strong> ${req.headers['user-agent']}</p>
-            <p><strong>IP Adresi:</strong> ${ip}</p>
-        </body>
-        </html>
-    `);
-});
-
-// ✅ **BOTD TEST ROUTE**
+// ✅ **BOTD TEST + Tarayıcı Tespiti**
 app.get('/botd-test', async (req, res) => {
+    const agent = useragent.parse(req.headers['user-agent']); // Kullanıcı tarayıcı bilgisi
+    const browserName = agent.family; // Tarayıcı ismi (Chrome, Firefox, Edge vb.)
+    const browserVersion = agent.major; // Tarayıcı sürümü (133, 114 vb.)
+
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bot Detection</title>
+            <title>Bot Detection & Browser Info</title>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
+            <p><strong>Tarayıcı:</strong> <span id="browser"></span></p>
+
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
 
@@ -71,6 +54,9 @@ app.get('/botd-test', async (req, res) => {
                     }
                 }
                 detectBot();
+
+                // Tarayıcı Bilgilerini Güncelle
+                document.getElementById("browser").innerText = '${browserName} ${browserVersion}';
             </script>
         </body>
         </html>
