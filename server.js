@@ -1,9 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const requestIp = require('request-ip');
 
-const app = express(); // ✅ Express uygulaması başlatıldı
+const app = express(); // ✅ Express başlatıldı
 
-// 🌍 **CORS İzinleri (Güvenlik Ayarı)**
+// 🔥 **CORS Politikası (Her Yer Erişebilsin)**
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -19,13 +20,12 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! You can test BotD at <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **BOTD TEST ROUTE (Senin IP, Tarayıcı ve Gizli Mod Bilgilerini Gösterir)**
+// ✅ **BOTD TEST ROUTE (Senin IP, Tarayıcı, Gizli Mod, Headless Mod Bilgilerini Gösterir)**
 app.get('/botd-test', async (req, res) => {
-    // **IP Adresi Çekme (Gerçek Kullanıcı IP'sini Alır)**
-    const ipList = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const ipAddress = Array.isArray(ipList) ? ipList[0] : ipList; // Gerçek IP Adresini Seç
+    // 🌍 **Gerçek IP Adresini Çekme**
+    const ipAddress = requestIp.getClientIp(req);
 
-    // **Tarayıcı Bilgisini Çekme**
+    // 🌐 **Tarayıcı Bilgisini Çekme**
     const userAgent = req.headers['user-agent'];
 
     res.send(`
@@ -38,7 +38,7 @@ app.get('/botd-test', async (req, res) => {
         </head>
         <body>
             <h1>🌍 Bot Detection Test</h1>
-            <p><strong>✅ Senin IP Adresin:</strong> ${ipAddress}</p>
+            <p><strong>✅ Senin Gerçek IP Adresin:</strong> ${ipAddress}</p>
             <p><strong>✅ Tarayıcı Bilgin:</strong> ${userAgent}</p>
             <p id="incognito-status"><strong>✅ Gizli Mod:</strong> Kontrol ediliyor...</p>
             <p id="headless-status"><strong>✅ Headless Mode:</strong> Kontrol ediliyor...</p>
