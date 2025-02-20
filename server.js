@@ -3,9 +3,9 @@ const bodyParser = require('body-parser');
 const requestIp = require('request-ip');
 const useragent = require('useragent');
 
-const app = express(); // ✅ Eksik app tanımlandı
+const app = express(); // Express başlatıldı
 
-// ✅ **Sunucu Hatalarına Karşı Güvenlik Önlemi**
+// 🚨 Sunucu Hatalarını Yakala (Crash Olursa Logları Göster)
 process.on('uncaughtException', (err) => {
     console.error("🚨 Uncaught Exception:", err);
 });
@@ -14,7 +14,7 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error("🚨 Unhandled Rejection at:", promise, "reason:", reason);
 });
 
-// ✅ **CORS Ayarları**
+// ✅ CORS Ayarları
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -33,15 +33,9 @@ app.get('/', (req, res) => {
 // ✅ **Bot Detection ve Tarayıcı Tespiti**
 app.get('/botd-test', async (req, res) => {
     try {
-        const agent = useragent.parse(req.headers['user-agent']); // Kullanıcı Tarayıcı Bilgisi
-        const browserName = agent.family; // Tarayıcı İsmi
-        const browserVersion = agent.major; // Tarayıcı Sürümü
-
-        // ✅ **Brave Tarayıcısını Tespit Et**
-        let isBrave = false;
-        if (req.headers['user-agent'].includes("Brave") || browserName === "Chrome" && !("google" in window)) {
-            isBrave = true;
-        }
+        console.log("✅ Bot Detection başlatıldı..."); // Sunucu loguna düşsün
+        const agent = useragent.parse(req.headers['user-agent']); // Tarayıcı bilgisi
+        console.log("📌 Kullanıcı Tarayıcısı:", agent.toString()); // Log'a ekle
 
         res.send(`
             <!DOCTYPE html>
@@ -54,7 +48,7 @@ app.get('/botd-test', async (req, res) => {
             <body>
                 <h1>Bot Detection Test</h1>
                 <p id="result">Lütfen bekleyin...</p>
-                <p><strong>Tarayıcı:</strong> <span id="browser">${isBrave ? "Brave" : browserName} ${browserVersion}</span></p>
+                <p><strong>Tarayıcı:</strong> ${agent.family} ${agent.major}</p>
 
                 <script type="module">
                     import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
@@ -75,7 +69,7 @@ app.get('/botd-test', async (req, res) => {
             </html>
         `);
     } catch (error) {
-        console.error("🚨 Sunucu Hatası! Logları Kontrol Et:", error);
+        console.error("🚨 Sunucu Hatası:", error);
         res.status(500).send("🚨 Sunucu Hatası! Logları Kontrol Et.");
     }
 });
