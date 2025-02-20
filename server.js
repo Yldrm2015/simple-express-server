@@ -3,13 +3,12 @@ const bodyParser = require('body-parser');
 const requestIp = require('request-ip');
 const useragent = require('useragent');
 
-const app = express(); // Express başlatıldı
+const app = express();
 
-// 🚨 Sunucu Hatalarını Yakala (Crash Olursa Logları Göster)
+// 🚨 Sunucu Hatalarını Yakala
 process.on('uncaughtException', (err) => {
     console.error("🚨 Uncaught Exception:", err);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
     console.error("🚨 Unhandled Rejection at:", promise, "reason:", reason);
 });
@@ -30,12 +29,12 @@ app.get('/', (req, res) => {
     res.send('✅ Server is running! Test etmek için: <a href="/botd-test">/botd-test</a>');
 });
 
-// ✅ **Bot Detection ve Tarayıcı Tespiti**
+// ✅ **Tarayıcı ve Bot Detection**
 app.get('/botd-test', async (req, res) => {
     try {
-        console.log("✅ Bot Detection başlatıldı..."); // Sunucu loguna düşsün
-        const agent = useragent.parse(req.headers['user-agent']); // Tarayıcı bilgisi
-        console.log("📌 Kullanıcı Tarayıcısı:", agent.toString()); // Log'a ekle
+        console.log("✅ Bot Detection başlatıldı...");
+        const agent = useragent.parse(req.headers['user-agent']);
+        console.log("📌 Kullanıcı Tarayıcısı:", agent.toString());
 
         res.send(`
             <!DOCTYPE html>
@@ -48,7 +47,7 @@ app.get('/botd-test', async (req, res) => {
             <body>
                 <h1>Bot Detection Test</h1>
                 <p id="result">Lütfen bekleyin...</p>
-                <p><strong>Tarayıcı:</strong> ${agent.family} ${agent.major}</p>
+                <p><strong>Tarayıcı:</strong> <span id="browser-info">Tespit ediliyor...</span></p>
 
                 <script type="module">
                     import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
@@ -64,6 +63,37 @@ app.get('/botd-test', async (req, res) => {
                         }
                     }
                     detectBot();
+
+                    // **📌 Tarayıcı Tespiti (Daha Gelişmiş)**
+                    function getBrowserInfo() {
+                        const userAgent = navigator.userAgent;
+                        const vendor = navigator.vendor;
+
+                        let browserName = "Bilinmiyor";
+
+                        if (userAgent.includes("Firefox")) {
+                            browserName = "Firefox";
+                        } else if (userAgent.includes("SamsungBrowser")) {
+                            browserName = "Samsung Internet";
+                        } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
+                            browserName = "Opera";
+                        } else if (userAgent.includes("Edg")) {
+                            browserName = "Microsoft Edge";
+                        } else if (userAgent.includes("Chrome")) {
+                            if (vendor.includes("Google")) {
+                                browserName = "Google Chrome";
+                            } else if (vendor.includes("Brave")) {
+                                browserName = "Brave";
+                            } else {
+                                browserName = "Chromium Tabanlı Tarayıcı";
+                            }
+                        } else if (userAgent.includes("Safari")) {
+                            browserName = "Safari";
+                        } 
+
+                        document.getElementById("browser-info").innerText = browserName;
+                    }
+                    getBrowserInfo();
                 </script>
             </body>
             </html>
