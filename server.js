@@ -1,6 +1,5 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const requestIp = require('request-ip'); // ✅ Eksik modül eklendi
 
 const app = express();
 
@@ -22,10 +21,6 @@ app.get('/', (req, res) => {
 
 // ✅ **BOTD TEST ROUTE (IP, Tarayıcı ve Gizli Mod Bilgileriyle)**
 app.get('/botd-test', async (req, res) => {
-    const clientIp = requestIp.getClientIp(req); // ✅ Gerçek IP adresini al
-    const userAgent = req.headers['user-agent'] || 'Bilinmiyor'; // ✅ Kullanıcı Tarayıcı Bilgisi
-    const isIncognito = req.headers['sec-ch-ua'] ? 'Hayır' : 'Evet'; // ✅ Gizli Mod Tespiti
-
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -37,9 +32,9 @@ app.get('/botd-test', async (req, res) => {
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
-            <p><strong>Tarayıcı Bilgisi:</strong> ${userAgent}</p>
-            <p><strong>IP Adresi:</strong> ${clientIp}</p>
-            <p><strong>Gizli Mod:</strong> ${isIncognito}</p>
+            <p id="browser-info"><strong>Tarayıcı Bilgisi:</strong> Yükleniyor...</p>
+            <p id="ip-info"><strong>IP Adresi:</strong> Yükleniyor...</p>
+            <p id="incognito-info"><strong>Gizli Mod:</strong> Yükleniyor...</p>
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
 
@@ -48,6 +43,15 @@ app.get('/botd-test', async (req, res) => {
                         const botd = await load();
                         const result = await botd.detect();
                         document.getElementById("result").innerText = '✅ Bot Detected: ' + result.bot;
+
+                        // Tarayıcı ve sistem bilgilerini çek
+                        document.getElementById("browser-info").innerText = '📌 Tarayıcı Bilgisi: ' + navigator.userAgent;
+                        document.getElementById("incognito-info").innerText = '🔒 Gizli Mod: ' + (result.incognito ? 'Evet' : 'Hayır');
+
+                        // ✅ IP adresini BotD üzerinden al
+                        const ipResponse = await fetch('https://api.fpjs.io/', { method: 'GET' });
+                        const ipData = await ipResponse.json();
+                        document.getElementById("ip-info").innerText = '🌍 IP Adresi: ' + ipData.ip;
                     } catch (error) {
                         console.error("❌ BotD hata verdi:", error);
                         document.getElementById("result").innerText = "⚠️ BotD çalıştırılırken hata oluştu!";
