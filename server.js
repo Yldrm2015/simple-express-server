@@ -16,6 +16,16 @@ app.use(helmet({ contentSecurityPolicy: false }));
 // 📌 Statik dosya servisini doğru ayarla
 app.use(express.static(path.join(__dirname, "public")));
 
+// 📌 Cache Kontrolü (Tarayıcı Bilgisini Güncellemek İçin)
+app.use((req, res, next) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    next();
+});
+
+let jsEnabledUsers = new Set();
+
 app.get("/", (req, res) => {
     res.send("✅ Server is running! Test için: <a href='/botd-test'>/botd-test</a>");
 });
@@ -62,6 +72,11 @@ app.post("/js-check", (req, res) => {
     const ip = requestIp.getClientIp(req);
     jsEnabledUsers.add(ip);
     res.sendStatus(200);
+});
+
+app.get("/browser-info", (req, res) => {
+    const userAgent = req.headers["user-agent"];
+    res.json({ userAgent });
 });
 
 const PORT = process.env.PORT || 6069;
