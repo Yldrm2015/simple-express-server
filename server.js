@@ -1,6 +1,6 @@
-const express = require("express");
-const requestIp = require("request-ip");
-const fetch = require("node-fetch");
+import express from "express";
+import requestIp from "request-ip";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(express.json());
