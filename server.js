@@ -1,11 +1,11 @@
 const express = require("express");
 const requestIp = require("request-ip");
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ✅ **Ana Sayfa (Bilgilendirme İçin)**
+// ✅ **Ana Sayfa**
 app.get("/", (req, res) => {
     res.send(`
         <h1>✅ Server is running!</h1>
@@ -15,31 +15,36 @@ app.get("/", (req, res) => {
 
 // ✅ **Sunucu Tarafında Bot Detection API**
 app.post("/server-botd", async (req, res) => {
-    const clientIp = requestIp.getClientIp(req) || "IP Bulunamadı"; // IP adresini al
+    const clientIp = requestIp.getClientIp(req) || "IP Bulunamadı"; // Kullanıcının IP adresini al
     const userAgent = req.headers["user-agent"] || "Bilinmiyor"; // Kullanıcının tarayıcı bilgilerini al
 
-    // 🚨 **Basit Bot Analizi (IP ve User-Agent ile)**
     let isBot = false;
 
-    // 🚨 **Şüpheli IP Aralıkları (Bot Olabilir)**
-    const botIPPatterns = ["66.249", "74.125", "207.46", "17.57", "40.77"]; // Google, Bing, Apple botları
-    if (botIPPatterns.some(pattern => clientIp.startsWith(pattern))) {
-        isBot = true;
-    }
+    // 🚨 **Bot Tespiti İçin API'yi Kullan**
+    try {
+        const response = await fetch("https://botd.fpapi.io/api/v1/detect", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "User-Agent": userAgent,
+                "X-Forwarded-For": clientIp
+            }
+        });
 
-    // 🚨 **Şüpheli User-Agent Analizi**
-    const botUserAgents = ["bot", "crawl", "spider", "slurp", "mediapartners"];
-    if (botUserAgents.some(bot => userAgent.toLowerCase().includes(bot))) {
-        isBot = true;
-    }
+        const botDetection = await response.json();
+        isBot = botDetection.bot;
 
-    // ✅ **Yanıt Döndür**
-    res.json({
-        success: true,
-        ip: clientIp,
-        userAgent: userAgent,
-        botDetection: isBot ? "🚨 BOT TESPİT EDİLDİ!" : "✅ İnsan Kullanıcı"
-    });
+        res.json({
+            success: true,
+            ip: clientIp,
+            userAgent: userAgent,
+            botDetection: isBot ? "🚨 BOT TESPİT EDİLDİ!" : "✅ İnsan Kullanıcı",
+            botKind: botDetection.bot ? botDetection.botKind : "Normal Kullanıcı"
+        });
+    } catch (error) {
+        console.error("🚨 Bot Detection API Hatası:", error);
+        res.status(500).json({ success: false, message: "Bot detection hatası oluştu!" });
+    }
 });
 
 // ✅ **Sunucu Başlat**
