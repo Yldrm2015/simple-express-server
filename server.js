@@ -13,20 +13,18 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(helmet({ contentSecurityPolicy: false }));
 
-let jsEnabledUsers = new Set();
+// 📌 Statik dosya servisini doğru ayarla
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
     res.send("✅ Server is running! Test için: <a href='/botd-test'>/botd-test</a>");
 });
 
 app.get("/botd-test", (req, res) => {
-    const ipAddress = requestIp.getClientIp(req);
     const agent = useragent.parse(req.headers["user-agent"]);
-
+    const ipAddress = requestIp.getClientIp(req);
     const isJSActive = jsEnabledUsers.has(ipAddress);
-    const isHeadless = /HeadlessChrome|bot|crawl|spider|Baiduspider|bingbot|duckduckbot|yandexbot/i.test(req.headers["user-agent"]);
-    const isProxy = req.headers["via"] || req.headers["x-forwarded-for"];
-    const isLikelyBot = !isJSActive || isHeadless || isProxy;
+    const isLikelyBot = !isJSActive;
 
     let botStatus = isLikelyBot ? "🚨 Bot Şüphesi!" : "✅ İnsan Kullanıcı";
 
@@ -54,25 +52,7 @@ app.get("/botd-test", (req, res) => {
                 <p class="alert">🚨 JavaScript devre dışı! Bot olabilir.</p>
             </noscript>
 
-            <script type="module">
-                import { load } from '/botd-client.js';
-
-                async function detectBot() {
-                    try {
-                        const botd = await load();
-                        const result = await botd.detect();
-                        document.getElementById("result").innerText = result.bot 
-                            ? "🚨 BOT TESPİT EDİLDİ!" 
-                            : "✅ İnsan Kullanıcı";
-
-                        fetch('/js-check', { method: 'POST' });
-                    } catch (error) {
-                        console.error("BotD hata verdi:", error);
-                        document.getElementById("result").innerText = "⚠️ Bot Detection Çalıştırılamadı!";
-                    }
-                }
-                detectBot();
-            </script>
+            <script type="module" src="/botd-client.js"></script>
         </body>
         </html>
     `);
@@ -83,9 +63,6 @@ app.post("/js-check", (req, res) => {
     jsEnabledUsers.add(ip);
     res.sendStatus(200);
 });
-
-// Statik dosya servisi (BotD istemci tarafı kodu için)
-app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
