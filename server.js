@@ -2,34 +2,38 @@ const express = require("express");
 const requestIp = require("request-ip");
 
 const app = express();
-
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ **Ana Sayfa**
+// ✅ **Ana Sayfa (Bilgilendirme İçin)**
 app.get("/", (req, res) => {
-    res.send("✅ Server is running! Bot Detection API: <a href='/server-botd'>/server-botd</a>");
+    res.send(`
+        <h1>✅ Server is running!</h1>
+        <p>Bot Detection API: <a href="/server-botd">/server-botd</a></p>
+    `);
 });
 
-// ✅ **Sunucu Tarafında Basit Bot Detection API'si**
+// ✅ **Sunucu Tarafında Bot Detection API**
 app.post("/server-botd", async (req, res) => {
-    const clientIp = requestIp.getClientIp(req);  // Kullanıcının IP adresini al
-    const userAgent = req.headers["user-agent"] || "Bilinmiyor";  // Kullanıcının tarayıcı bilgilerini al
+    const clientIp = requestIp.getClientIp(req) || "IP Bulunamadı"; // IP adresini al
+    const userAgent = req.headers["user-agent"] || "Bilinmiyor"; // Kullanıcının tarayıcı bilgilerini al
 
-    // Bot olup olmadığını anlamak için basit bir analiz yapalım
+    // 🚨 **Basit Bot Analizi (IP ve User-Agent ile)**
     let isBot = false;
 
     // 🚨 **Şüpheli IP Aralıkları (Bot Olabilir)**
-    const botIPPatterns = ["66.249", "74.125", "207.46", "17.57", "40.77"]; // Google, Bing, Apple, vb. botlar
+    const botIPPatterns = ["66.249", "74.125", "207.46", "17.57", "40.77"]; // Google, Bing, Apple botları
     if (botIPPatterns.some(pattern => clientIp.startsWith(pattern))) {
         isBot = true;
     }
 
-    // 🚨 **Şüpheli User-Agent Tespit (Bot Olabilir)**
+    // 🚨 **Şüpheli User-Agent Analizi**
     const botUserAgents = ["bot", "crawl", "spider", "slurp", "mediapartners"];
     if (botUserAgents.some(bot => userAgent.toLowerCase().includes(bot))) {
         isBot = true;
     }
 
+    // ✅ **Yanıt Döndür**
     res.json({
         success: true,
         ip: clientIp,
