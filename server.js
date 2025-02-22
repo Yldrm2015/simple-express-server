@@ -28,12 +28,19 @@ app.get("/botd-test", (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection & Browser Info</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; }
+                #result { font-size: 20px; font-weight: bold; }
+            </style>
         </head>
         <body>
             <h1>Bot Detection Test</h1>
             <p id="result">Lütfen bekleyin...</p>
             <p><strong>Tarayıcı:</strong> <span id="browser-info">${agent.toString()}</span></p>
             <p><strong>IP Adresiniz:</strong> <span id="ip-info">${ipAddress}</span></p>
+            <p><strong>Fare Hareketi:</strong> <span id="mouse-movement">Henüz Yok</span></p>
+            <p><strong>Kaydırma:</strong> <span id="scroll-info">Henüz Yok</span></p>
+            <p><strong>Tıklama:</strong> <span id="click-info">Henüz Yok</span></p>
 
             <script type="module">
                 import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
@@ -51,6 +58,21 @@ app.get("/botd-test", (req, res) => {
                     }
                 }
                 detectBot();
+
+                // ✅ **Fare Hareketi Testi**
+                document.addEventListener("mousemove", () => {
+                    document.getElementById("mouse-movement").innerText = "✅ Fare Hareketi Algılandı!";
+                });
+
+                // ✅ **Kaydırma Testi**
+                document.addEventListener("scroll", () => {
+                    document.getElementById("scroll-info").innerText = "✅ Sayfa Kaydırıldı!";
+                });
+
+                // ✅ **Tıklama Testi**
+                document.addEventListener("click", () => {
+                    document.getElementById("click-info").innerText = "✅ Sayfaya Tıklama Yapıldı!";
+                });
             </script>
         </body>
         </html>
