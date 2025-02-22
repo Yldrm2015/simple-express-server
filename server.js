@@ -1,53 +1,63 @@
-import express from "express";
-import requestIp from "request-ip";
-import fetch from "node-fetch";
+const express = require("express");
+const bodyParser = require("body-parser");
+const requestIp = require("request-ip");
+const useragent = require("useragent");
+const cors = require("cors");
 
 const app = express();
-app.use(express.json());
+
+// ✅ CORS Ayarları
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // ✅ **Ana Sayfa**
 app.get("/", (req, res) => {
+    res.send("✅ Server is running! Test için: <a href='/botd-test'>/botd-test</a>");
+});
+
+// ✅ **Bot Detection ve Tarayıcı Bilgisi Sayfası**
+app.get("/botd-test", (req, res) => {
+    const agent = useragent.parse(req.headers["user-agent"]);
+    const ipAddress = requestIp.getClientIp(req);
+
     res.send(`
-        <h1>✅ Server is running!</h1>
-        <p>Bot Detection API: <a href="/server-botd">/server-botd</a></p>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bot Detection & Browser Info</title>
+        </head>
+        <body>
+            <h1>Bot Detection Test</h1>
+            <p id="result">Lütfen bekleyin...</p>
+            <p><strong>Tarayıcı:</strong> <span id="browser-info">${agent.toString()}</span></p>
+            <p><strong>IP Adresiniz:</strong> <span id="ip-info">${ipAddress}</span></p>
+
+            <script type="module">
+                import { load } from 'https://cdn.jsdelivr.net/npm/@fingerprintjs/botd@latest/+esm';
+
+                async function detectBot() {
+                    try {
+                        const botd = await load();
+                        const result = await botd.detect();
+                        document.getElementById("result").innerText = result.bot 
+                            ? "🚨 BOT TESPİT EDİLDİ!" 
+                            : "✅ İnsan Kullanıcı";
+                    } catch (error) {
+                        console.error("❌ BotD hata verdi:", error);
+                        document.getElementById("result").innerText = "⚠️ Bot Detection Çalıştırılamadı!";
+                    }
+                }
+                detectBot();
+            </script>
+        </body>
+        </html>
     `);
 });
 
-// ✅ **Sunucu Tarafında Bot Detection API**
-app.post("/server-botd", async (req, res) => {
-    const clientIp = requestIp.getClientIp(req) || "IP Bulunamadı"; // Kullanıcının IP adresini al
-    const userAgent = req.headers["user-agent"] || "Bilinmiyor"; // Kullanıcının tarayıcı bilgilerini al
-
-    let isBot = false;
-
-    // 🚨 **Bot Tespiti İçin API'yi Kullan**
-    try {
-        const response = await fetch("https://botd.fpapi.io/api/v1/detect", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "User-Agent": userAgent,
-                "X-Forwarded-For": clientIp
-            }
-        });
-
-        const botDetection = await response.json();
-        isBot = botDetection.bot;
-
-        res.json({
-            success: true,
-            ip: clientIp,
-            userAgent: userAgent,
-            botDetection: isBot ? "🚨 BOT TESPİT EDİLDİ!" : "✅ İnsan Kullanıcı",
-            botKind: botDetection.bot ? botDetection.botKind : "Normal Kullanıcı"
-        });
-    } catch (error) {
-        console.error("🚨 Bot Detection API Hatası:", error);
-        res.status(500).json({ success: false, message: "Bot detection hatası oluştu!" });
-    }
-});
-
-// ✅ **Sunucu Başlat**
+// ✅ **PORT Ayarla ve Sunucuyu Başlat**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
