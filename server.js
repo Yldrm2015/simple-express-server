@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// 📌 Statik dosya servisini doğru ayarla
+// 📌 Statik dosya servisini aç
 app.use(express.static(path.join(__dirname, "public")));
 
 // 📌 Cache Kontrolü (Tarayıcı Bilgisini Güncellemek İçin)
@@ -45,6 +45,7 @@ app.get("/botd-test", (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Bot Detection</title>
+            <script type="module" src="/botd-client.js"></script>
             <style>
                 body { font-family: Arial, sans-serif; text-align: center; }
                 #result { font-size: 20px; font-weight: bold; }
@@ -61,8 +62,6 @@ app.get("/botd-test", (req, res) => {
             <noscript>
                 <p class="alert">🚨 JavaScript devre dışı! Bot olabilir.</p>
             </noscript>
-
-            <script type="module" src="/botd-client.js"></script>
         </body>
         </html>
     `);
