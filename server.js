@@ -18,8 +18,8 @@ app.get("/botd-test", async (req, res) => {
         
         res.json(result); // 📌 SADECE BotD'nin ürettiği sonucu döndür
     } catch (error) {
-        console.error("BotD hata verdi:", error);
-        res.status(500).json({ error: "BotD çalıştırılamadı!" });
+        console.error("BotD hata verdi:", error);  // 📌 Hata mesajını konsola yaz
+        res.status(500).json({ error: "BotD çalıştırılamadı!", details: error.message });
     }
 });
 
