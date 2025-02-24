@@ -5,9 +5,9 @@ const axios = require("axios");
 const app = express();
 app.use(cors());
 
-//  API Key ve Bölgesel Endpoint (Sadece EU)
+// API Key ve Bölgesel Endpoint (EU)
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
-const BOTD_API_URL = "https://eu.api.fpjs.io/v1/botd"; // Sadece EU URL'si
+const BOTD_API_URL = "https://eu.api.fpjs.io/v1/botd"; // Doğru uç nokta
 
 app.get("/botd-test", async (req, res) => {
   try {
