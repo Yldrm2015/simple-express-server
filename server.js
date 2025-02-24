@@ -1,25 +1,28 @@
 const express = require("express");
-const { load } = require("@fingerprintjs/botd");
 const cors = require("cors");
+const axios = require("axios");
 
 const app = express();
 app.use(cors());
 
-// 📌 Root Endpoint (Ana Sayfa)
-app.get("/", (req, res) => {
-    res.send("✅ Server is running! Test için: <a href='/botd-test'>BotD Testine Git</a>");
-});
+// 📌 **FingerprintJS PRO Server API ile BotD'yi Sunucuda Çalıştırma**
+const FINGERPRINT_API_KEY = "b80bbum6BTT6MT2eIb5B"; // Buraya kendi API key'ini ekledik
+const BOTD_API_URL = "https://api.fpjs.io/botd/v1/detect";
 
-// 📌 BotD Test Endpoint’i
 app.get("/botd-test", async (req, res) => {
     try {
-        const botd = await load();
-        const result = await botd.detect();
-        
-        res.json(result); // 📌 SADECE BotD'nin ürettiği sonucu döndür
+        // **Sunucu tarafında BotD API'yi çağırıyoruz**
+        const response = await axios.post(BOTD_API_URL, {}, {
+            headers: {
+                "Content-Type": "application/json",
+                "Auth-Token": FINGERPRINT_API_KEY
+            }
+        });
+
+        res.json(response.data); // 📌 BotD'nin döndürdüğü sonucu direkt olarak istemciye gönderiyoruz
     } catch (error) {
-        console.error("BotD hata verdi:", error);  // 📌 Hata mesajını konsola yaz
-        res.status(500).json({ error: "BotD çalıştırılamadı!", details: error.message });
+        console.error("BotD Sunucu API Hatası:", error);
+        res.status(500).json({ error: "BotD API Çalıştırılamadı!", details: error.message });
     }
 });
 
