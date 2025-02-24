@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 
 // 📌 **FingerprintJS PRO Server API ile BotD'yi Sunucuda Çalıştırma**
-const FINGERPRINT_API_KEY = "b80bbum6BTT6MT2eIb5B"; // Buraya kendi API key'ini ekledik
+const FINGERPRINT_API_KEY = "b80bbum6BTT6MT2eIb5B"; // API Key buraya eklendi
 const BOTD_API_URL = "https://api.fpjs.io/botd/v1/detect";
 
 app.get("/botd-test", async (req, res) => {
@@ -21,8 +21,11 @@ app.get("/botd-test", async (req, res) => {
 
         res.json(response.data); // 📌 BotD'nin döndürdüğü sonucu direkt olarak istemciye gönderiyoruz
     } catch (error) {
-        console.error("BotD Sunucu API Hatası:", error);
-        res.status(500).json({ error: "BotD API Çalıştırılamadı!", details: error.message });
+        console.error("🚨 BotD Sunucu API Hatası:", error.response ? error.response.data : error.message);
+        res.status(500).json({
+            error: "BotD API Çalıştırılamadı!",
+            details: error.response ? error.response.data : error.message
+        });
     }
 });
 
