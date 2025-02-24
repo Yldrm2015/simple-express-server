@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 
 // 📌 **FingerprintJS PRO Server API ile BotD'yi Sunucuda Çalıştırma**
-const FINGERPRINT_API_KEY = "fp-YENİ-API-KEYİNİ-BURAYA-KOY"; // API Key buraya eklenmeli!
+const FINGERPRINT_SECRET_KEY = "pSHFS5NqRvfU3tw3hLp3"; // Secret Key buraya eklendi!
 const BOTD_API_URL = "https://api.fpjs.io/botd/v1/detect";
 
 app.get("/botd-test", async (req, res) => {
@@ -15,7 +15,7 @@ app.get("/botd-test", async (req, res) => {
         const response = await axios.post(BOTD_API_URL, {}, {
             headers: {
                 "Content-Type": "application/json",
-                "Auth-Token": FINGERPRINT_API_KEY
+                "Auth-Token": FINGERPRINT_SECRET_KEY.trim() // Trim ekleyerek boşluk hatalarını önlüyoruz
             }
         });
 
