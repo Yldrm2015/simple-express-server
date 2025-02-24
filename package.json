@@ -4,11 +4,11 @@
   "description": "BotD test sunucusu",
   "main": "server.js",
   "scripts": {
-    "start": "npm install && node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "@fingerprintjs/botd": "^1.0.0"
+    "axios": "^1.4.0"
   }
 }
