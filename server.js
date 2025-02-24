@@ -1,12 +1,18 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
-require("dotenv").config(); // 📌 Çevresel değişkenleri yükle
+
+// **dotenv modülünü güvenli şekilde yükle**
+try {
+    require("dotenv").config();
+} catch (error) {
+    console.log("dotenv modülü yüklenemedi, ancak Render Environment Variables kullanılabilir.");
+}
 
 const app = express();
 app.use(cors());
 
-// 📌 **Secret Key artık .env dosyasından veya Render Environment Variables'dan okunuyor**
+// **Secret Key artık Render Environment Variables'dan okunuyor**
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const BOTD_API_URL = "https://api.fpjs.io/v1/botd";
 
@@ -15,7 +21,7 @@ app.get("/botd-test", async (req, res) => {
         const response = await axios.post(BOTD_API_URL, {}, {
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${FINGERPRINT_SECRET_KEY}`, // ✅ Render Environment Variable'dan API Key'i alıyoruz
+                "Authorization": `Bearer ${FINGERPRINT_SECRET_KEY}`, // ✅ API Key Render'dan okunuyor
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" // ✅ Daha güvenilir olması için User-Agent eklendi
             }
         });
