@@ -5,9 +5,9 @@ const axios = require("axios");
 const app = express();
 app.use(cors());
 
-// 📌 Environment Variables’dan API Key alıyoruz (Doğrudan kod içine yazmıyoruz!)
+// 📌 Avrupa API URL'sini kullanıyoruz!
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
-const BOTD_API_URL = "https://api.fpjs.io/v1/botd";
+const BOTD_API_URL = "https://eu.api.fpjs.io/v1/botd";  // Avrupa bölgesi API
 
 app.get("/botd-test", async (req, res) => {
     try {
