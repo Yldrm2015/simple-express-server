@@ -5,22 +5,26 @@ const axios = require("axios");
 const app = express();
 app.use(cors());
 
-// 📌 **Public Key tarayıcı tarafında, Secret Key sunucu tarafında kullanılır.**
-const FINGERPRINT_SECRET_KEY = "pSHFS5NqRvfU3tw3hLp3"; // Senin gerçek Secret Key'in buraya yazılmalı.
+// 📌 Environment Variables’dan API Key alıyoruz (Doğrudan kod içine yazmıyoruz!)
+const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const BOTD_API_URL = "https://api.fpjs.io/v1/botd";
 
 app.get("/botd-test", async (req, res) => {
     try {
-        // **Sunucu tarafında API çağrısını yapıyoruz**
+        if (!FINGERPRINT_SECRET_KEY) {
+            throw new Error("API Key bulunamadı! Lütfen Render Environment Variables içinde 'FINGERPRINT_SECRET_KEY' değişkenini tanımlayın.");
+        }
+
         const response = await axios.post(BOTD_API_URL, {}, {
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${FINGERPRINT_SECRET_KEY}`, // ✅ Sunucu için Secret Key kullanılıyor.
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                "Authorization": `Bearer ${FINGERPRINT_SECRET_KEY}`, 
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "Accept": "application/json"
             }
         });
 
-        res.json(response.data); // 📌 API'nin döndürdüğü sonucu istemciye gönderiyoruz.
+        res.json(response.data);
     } catch (error) {
         console.error("🚨 BotD API Hatası:", error.response ? error.response.data : error.message);
 
