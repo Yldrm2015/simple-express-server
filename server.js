@@ -5,11 +5,9 @@ const axios = require("axios");
 const app = express();
 app.use(cors());
 
-//  API Key ve Bölgesel Endpoint
+//  API Key ve Bölgesel Endpoint (Sadece EU)
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
-
-// Varsayılan API URL'si (US)
-let BOTD_API_URL = "https://api.fpjs.io/v1/botd";
+const BOTD_API_URL = "https://eu.api.fpjs.io/v1/botd"; // Sadece EU URL'si
 
 app.get("/botd-test", async (req, res) => {
   try {
@@ -55,13 +53,6 @@ app.get("/botd-test", async (req, res) => {
     console.log("API Response Status:", error.response?.status);
     console.log("API Response Data:", error.response?.data);
     console.log("API Response Headers:", error.response?.headers);
-
-    // 403 hatası alındığında diğer bölgeyi dene
-    if (error.response?.status === 403 && BOTD_API_URL.includes("api.fpjs.io")) {
-      console.log(" 403 hatası alındı, EU bölgesini deniyorum...");
-      BOTD_API_URL = "https://eu.api.fpjs.io/v1/botd";
-      return await this.route.stack[0].handle(req, res); // Aynı isteği EU bölgesiyle tekrar dene
-    }
 
     // Hata durumunda detaylı bilgi gönder
     res.status(error.response?.status || 500).json({
