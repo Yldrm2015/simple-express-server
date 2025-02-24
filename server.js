@@ -36,8 +36,13 @@ app.get("/botd-test", async (req, res) => {
 
     const eventData = eventResponse.data;
 
-    // 3. Bot Kontrolü (Client-side identification gerektirir)
-    // Bu adım için Fingerprint tarayıcı eklentisini veya sandbox ortamını kullanın
+    // 3. Bot Kontrolü
+    if (eventData.products?.botd?.data?.bot?.result !== "notDetected") {
+      return res.status(403).json({
+        success: false,
+        error: "Bot detected, login is blocked.",
+      });
+    }
 
     // Başarılı cevabı istemciye gönder
     res.json(eventData);
