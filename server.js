@@ -7,10 +7,15 @@ app.use(cors());
 
 // 📌 API Key ve Bölgesel Endpoint
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
-const BOTD_API_URL = "https://api.fpjs.io/v1/botd";  // Amerika (US) bölgesi API
+
+// Bölgeye göre API URL'sini belirle
+const BOTD_API_URL = FINGERPRINT_SECRET_KEY.startsWith("eu_") 
+    ? "https://eu.api.fpjs.io/v1/botd"  // Avrupa (EU) bölgesi
+    : "https://api.fpjs.io/v1/botd";    // Amerika (US) bölgesi
 
 app.get("/botd-test", async (req, res) => {
     try {
+        // API Key kontrolü
         if (!FINGERPRINT_SECRET_KEY) {
             throw new Error("API Key bulunamadı! Lütfen Render Environment Variables içinde 'FINGERPRINT_SECRET_KEY' değişkenini tanımlayın.");
         }
@@ -18,6 +23,7 @@ app.get("/botd-test", async (req, res) => {
         console.log("API Key:", FINGERPRINT_SECRET_KEY);
         console.log("API URL:", BOTD_API_URL);
 
+        // API'ye POST isteği gönder
         const response = await axios.post(BOTD_API_URL, {}, {
             headers: {
                 "Content-Type": "application/json",
@@ -28,6 +34,8 @@ app.get("/botd-test", async (req, res) => {
         });
 
         console.log("API Response:", response.data);
+
+        // Başarılı cevabı istemciye gönder
         res.json(response.data);
     } catch (error) {
         console.error("🚨 BotD API Hatası:", error.response ? error.response.data : error.message);
@@ -41,6 +49,7 @@ app.get("/botd-test", async (req, res) => {
         console.log("API Response Data:", error.response?.data);
         console.log("API Response Headers:", error.response?.headers);
 
+        // Hata durumunda detaylı bilgi gönder
         res.status(error.response?.status || 500).json({
             error: "BotD API çalıştırılamadı!",
             status: error.response?.status || 500,
@@ -50,6 +59,7 @@ app.get("/botd-test", async (req, res) => {
     }
 });
 
+// Sunucuyu başlat
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
     console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
