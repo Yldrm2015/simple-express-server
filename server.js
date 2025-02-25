@@ -27,14 +27,20 @@ const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000;
 const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
+console.log("✅ Sunucu Başlatılıyor...");
+console.log("🌍 API Endpoint:", API_ENDPOINT);
+console.log("🔑 API Key Tanımlı mı?:", !!FINGERPRINT_SECRET_KEY);
+
 if (!FINGERPRINT_SECRET_KEY) {
   console.error("❌ ERROR: FINGERPRINT_SECRET_KEY environment variable is not set");
   process.exit(1);
 }
 
 app.post("/botd-test", async (req, res) => {
+  console.log("🟢 Yeni botd-test isteği alındı:", req.body);
   const { requestId } = req.body;
   if (!requestId) {
+    console.error("⚠️ Request ID eksik!");
     return res.status(400).json({ error: "Request ID eksik! Lütfen client-side identification gerçekleştirin." });
   }
 
@@ -47,6 +53,8 @@ app.post("/botd-test", async (req, res) => {
     });
 
     const identificationEvent = eventResponse.data;
+    console.log("📩 FingerprintJS API Yanıtı:", JSON.stringify(identificationEvent, null, 2));
+
     const botResult = identificationEvent.products?.botd?.data?.bot?.result;
     const identificationData = identificationEvent.products?.identification?.data;
 
@@ -83,22 +91,17 @@ app.post("/botd-test", async (req, res) => {
       return res.status(403).json({ error: "Kötü bot tespit edildi." });
     }
 
-    if (identificationEvent.products?.vpn?.data?.result === true) {
-      return res.status(403).json({ error: "VPN ağı tespit edildi." });
-    }
-    if (identificationEvent.products?.tor?.data?.result === true) {
-      return res.status(403).json({ error: "Tor ağı tespit edildi." });
-    }
-    if (identificationEvent.products?.tampering?.data?.result === true) {
-      return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
-    }
-
     res.json({ status: "OK", botResult, confidenceScore: identificationData.confidence?.score });
+
   } catch (error) {
-    console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
+    console.error("❌ FingerprintJS API Hatası:", JSON.stringify(error, null, 2));
+    console.error("🔎 Yanıt Durumu:", error.response?.status);
+    console.error("📩 Yanıt İçeriği:", error.response?.data);
+
     if (error.response && error.response.status === 401) {
       return res.status(500).json({ error: "Authentication failed - check your API key" });
     }
+
     res.status(500).json({
       error: "BotD API çalıştırılamadı!",
       details: error.response ? error.response.data : error.message,
