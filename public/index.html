@@ -9,47 +9,44 @@
     <h1>Bot Detection Test</h1>
     <p id="status">Detecting...</p>
 
-    <script type="module">
-        import * as FingerprintJS from 'https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY';
+    <script>
+        const fpPromise = import('https://fpjscdn.net/v3/YOUR_ACTUAL_API_KEY')
+            .then(FingerprintJS => FingerprintJS.load());
 
-        async function runFingerprint() {
-            try {
-                // FingerprintJS yükleniyor
-                const fp = await FingerprintJS.load();
-                const result = await fp.get();
+        fpPromise
+            .then(fp => fp.get())
+            .then(result => {
                 console.log("✅ FingerprintJS Sonucu:", result);
-                
                 const requestId = result.requestId;
-                if (!requestId) {
-                    throw new Error("Request ID alınamadı.");
-                }
-                
                 document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
-
-                // Server'a requestId gönder
-                const response = await fetch('/botd-test', {
+                
+                return fetch('/botd-test', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ requestId })
                 });
-                
-                console.log("🔎 Sunucu Yanıt Durumu:", response.status);
-                if (!response.ok) {
-                    throw new Error(`Sunucu hatası: ${response.status}`);
-                }
-                
-                const data = await response.json();
+            })
+            .then(response => response.json())
+            .then(data => {
                 console.log("📩 Sunucu Yanıt Verisi:", data);
                 document.getElementById("status").innerText = JSON.stringify(data, null, 2);
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error("❌ Hata:", error);
+                switch (error.message) {
+                    case FingerprintJS.ERROR_GENERAL_SERVER_FAILURE:
+                        console.log('Bilinmeyen sunucu hatası. Request ID:', error.requestId);
+                        break;
+                    case FingerprintJS.ERROR_CLIENT_TIMEOUT:
+                        console.log('Kimlik doğrulama süresi 10 saniyeyi aştı.');
+                        break;
+                    default:
+                        console.log('Diğer hata:', error.message);
+                }
                 document.getElementById("status").innerText = "Hata oluştu: " + error.message;
-            }
-        }
-
-        runFingerprint();
+            });
     </script>
 </body>
 </html>
