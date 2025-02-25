@@ -55,3 +55,25 @@ const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
   console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
 });
+
+// Client-side entegrasyon (Bu kod index.html dosyanıza eklenmelidir)
+/*
+<script>
+  const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
+    .then(FingerprintJS => FingerprintJS.load())
+
+  // Identification isteği yapın
+  fpPromise
+    .then(fp => fp.get())
+    .then(result => {
+      // requestId'yi alın
+      const requestId = result.requestId;
+      
+      // Server'a requestId ile istek yapın
+      fetch(`/botd-test?requestId=${requestId}`)
+        .then(response => response.json())
+        .then(data => console.log("Server Yanıtı:", data))
+        .catch(error => console.error("Hata:", error));
+    })
+</script>
+*/
