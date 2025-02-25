@@ -93,7 +93,7 @@ app.post("/botd-test", async (req, res) => {
       return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
     }
 
-    res.json({ status: "OK", botResult });
+    res.json({ status: "OK", botResult, confidenceScore: identificationData.confidence?.score });
   } catch (error) {
     console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
