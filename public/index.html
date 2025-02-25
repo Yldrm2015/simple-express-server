@@ -10,12 +10,12 @@
     <p id="status">Detecting...</p>
 
     <script>
-        // Store error constants for later use
+        // Hata sabitlerini saklamak için değişken
         let FP_ERRORS = {};
         
-        const fpPromise = import('https://fpjscdn.net/v3/<<YOUR_REAL_API_KEY>>')
+        const fpPromise = import('https://fpjscdn.net/v3/YOUR_REAL_API_KEY')
             .then(FingerprintJS => {
-                // Store error constants
+                // Hata sabitlerini sakla
                 FP_ERRORS = {
                     GENERAL_SERVER_FAILURE: FingerprintJS.ERROR_GENERAL_SERVER_FAILURE,
                     CLIENT_TIMEOUT: FingerprintJS.ERROR_CLIENT_TIMEOUT
