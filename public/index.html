@@ -17,6 +17,7 @@
         fpPromise
             .then(fp => fp.get())
             .then(result => {
+                console.log("✅ FingerprintJS Sonucu:", result);
                 const requestId = result.requestId;
                 document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
 
@@ -29,13 +30,16 @@
                     body: JSON.stringify({ requestId })
                 });
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log("🔎 Sunucu Yanıt Durumu:", response.status);
+                return response.json();
+            })
             .then(data => {
-                console.log("Server Response:", data);
+                console.log("📩 Sunucu Yanıt Verisi:", data);
                 document.getElementById("status").innerText = JSON.stringify(data, null, 2);
             })
             .catch(error => {
-                console.error("Hata:", error);
+                console.error("❌ Hata:", error);
                 document.getElementById("status").innerText = "Hata oluştu: " + error.message;
             });
     </script>
