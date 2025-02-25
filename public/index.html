@@ -7,31 +7,37 @@
 </head>
 <body>
     <h1>Bot Detection Test</h1>
-    <script>
-      const fpPromise = import('https://fpjscdn.net/v3/pSHFS5NqRvfU3tw3hLp3')
-        .then(FingerprintJS => FingerprintJS.load({
-          endpoint: [
-            "https://metrics.yourwebsite.com",
-            FingerprintJS.defaultEndpoint
-          ]
-        }));
+    <p id="status">Detecting...</p>
 
-      fpPromise
-        .then(fp => fp.get())
-        .then(result => {
-          const requestId = result.requestId;
-          
-          fetch('/botd-test', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ requestId })
-          })
+    <script>
+        // FingerprintJS API'yı yükleyelim
+        const fpPromise = import('https://fpjscdn.net/v3/pSHFS5NqRvfU3tw3hLp3')
+            .then(FingerprintJS => FingerprintJS.load());
+
+        fpPromise
+            .then(fp => fp.get())
+            .then(result => {
+                const requestId = result.requestId;
+                document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
+
+                // Server'a requestId gönder
+                return fetch('/botd-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ requestId })
+                });
+            })
             .then(response => response.json())
-            .then(data => console.log("Server Response:", data))
-            .catch(error => console.error("Error:", error));
-        });
+            .then(data => {
+                console.log("Server Response:", data);
+                document.getElementById("status").innerText = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                document.getElementById("status").innerText = "Hata oluştu: " + error.message;
+            });
     </script>
 </body>
 </html>
