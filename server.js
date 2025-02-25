@@ -1,6 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const dotenv = require("dotenv");
+const { parseIp } = require("./utils"); // IP adresi ayrıştırma fonksiyonu
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -9,6 +13,9 @@ app.use(express.json());
 // API Key ve Endpoint
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000;
+const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
+const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
@@ -27,11 +34,34 @@ app.post("/botd-test", async (req, res) => {
 
     const identificationEvent = eventResponse.data;
     const botResult = identificationEvent.products?.botd?.data?.bot?.result;
+    const identificationData = identificationEvent.products?.identification?.data;
 
     // 2. Güvenlik Kontrolleri
-    const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000;
-    if (Date.now() - Number(new Date(identificationEvent.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
+    if (!identificationData) {
+      return res.status(403).json({ error: "Identification verisi eksik." });
+    }
+
+    // Zaman Kontrolü (Replay Attack Önleme)
+    if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
       return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
+    }
+
+    // IP Kontrolü (Replay Attack Önleme)
+    const identificationIp = identificationData.ip;
+    const requestIp = parseIp(req);
+    if (IPv4_REGEX.test(requestIp) && identificationIp !== requestIp) {
+      return res.status(403).json({ error: "Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı." });
+    }
+
+    // Origin Kontrolü (Güvenlik Önlemi)
+    const identificationOrigin = new URL(identificationData.url).origin;
+    const requestOrigin = req.headers.origin;
+    if (
+      identificationOrigin !== requestOrigin ||
+      identificationOrigin !== ALLOWED_ORIGIN ||
+      requestOrigin !== ALLOWED_ORIGIN
+    ) {
+      return res.status(403).json({ error: "Beklenmeyen origin, potansiyel saldırı." });
     }
 
     // Bot Detection Kontrolü
@@ -54,6 +84,10 @@ app.post("/botd-test", async (req, res) => {
     res.json({ status: "OK", botResult });
   } catch (error) {
     console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
+    
+    if (error.response && error.response.status === 401) {
+      return res.status(500).json({ error: "Authentication failed - check your API key" });
+    }
     res.status(500).json({
       error: "BotD API çalıştırılamadı!",
       details: error.response ? error.response.data : error.message,
