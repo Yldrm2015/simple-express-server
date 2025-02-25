@@ -10,8 +10,18 @@
     <p id="status">Detecting...</p>
 
     <script>
-        const fpPromise = import('https://fpjscdn.net/v3/YOUR_ACTUAL_API_KEY')
-            .then(FingerprintJS => FingerprintJS.load());
+        // Store error constants for later use
+        let FP_ERRORS = {};
+        
+        const fpPromise = import('https://fpjscdn.net/v3/<<YOUR_REAL_API_KEY>>')
+            .then(FingerprintJS => {
+                // Store error constants
+                FP_ERRORS = {
+                    GENERAL_SERVER_FAILURE: FingerprintJS.ERROR_GENERAL_SERVER_FAILURE,
+                    CLIENT_TIMEOUT: FingerprintJS.ERROR_CLIENT_TIMEOUT
+                };
+                return FingerprintJS.load();
+            });
 
         fpPromise
             .then(fp => fp.get())
@@ -28,7 +38,12 @@
                     body: JSON.stringify({ requestId })
                 });
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log("📩 Sunucu Yanıt Verisi:", data);
                 document.getElementById("status").innerText = JSON.stringify(data, null, 2);
@@ -36,10 +51,10 @@
             .catch(error => {
                 console.error("❌ Hata:", error);
                 switch (error.message) {
-                    case FingerprintJS.ERROR_GENERAL_SERVER_FAILURE:
+                    case FP_ERRORS.GENERAL_SERVER_FAILURE:
                         console.log('Bilinmeyen sunucu hatası. Request ID:', error.requestId);
                         break;
-                    case FingerprintJS.ERROR_CLIENT_TIMEOUT:
+                    case FP_ERRORS.CLIENT_TIMEOUT:
                         console.log('Kimlik doğrulama süresi 10 saniyeyi aştı.');
                         break;
                     default:
