@@ -12,37 +12,44 @@
     <script type="module">
         import * as FingerprintJS from 'https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY';
 
-        // FingerprintJS yükleniyor
-        const fpPromise = FingerprintJS.load();
-
-        fpPromise
-            .then(fp => fp.get())
-            .then(result => {
+        async function runFingerprint() {
+            try {
+                // FingerprintJS yükleniyor
+                const fp = await FingerprintJS.load();
+                const result = await fp.get();
                 console.log("✅ FingerprintJS Sonucu:", result);
+                
                 const requestId = result.requestId;
+                if (!requestId) {
+                    throw new Error("Request ID alınamadı.");
+                }
+                
                 document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
 
                 // Server'a requestId gönder
-                return fetch('/botd-test', {
+                const response = await fetch('/botd-test', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ requestId })
                 });
-            })
-            .then(response => {
+                
                 console.log("🔎 Sunucu Yanıt Durumu:", response.status);
-                return response.json();
-            })
-            .then(data => {
+                if (!response.ok) {
+                    throw new Error(`Sunucu hatası: ${response.status}`);
+                }
+                
+                const data = await response.json();
                 console.log("📩 Sunucu Yanıt Verisi:", data);
                 document.getElementById("status").innerText = JSON.stringify(data, null, 2);
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error("❌ Hata:", error);
                 document.getElementById("status").innerText = "Hata oluştu: " + error.message;
-            });
+            }
+        }
+
+        runFingerprint();
     </script>
 </body>
 </html>
