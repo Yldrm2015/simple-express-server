@@ -2,7 +2,16 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
-const { parseIp } = require("./utils"); // IP adresi ayrıştırma fonksiyonu
+const path = require("path");
+let parseIp;
+
+try {
+  // Eğer utils.js dosyası varsa içe aktar, yoksa hata mesajı ver
+  parseIp = require("./utils").parseIp;
+} catch (err) {
+  console.warn("⚠️ Warning: utils.js dosyası bulunamadı, parseIp fonksiyonu devre dışı.");
+  parseIp = (req) => req.headers["x-forwarded-for"]?.split(",").shift() || req.socket.remoteAddress;
+}
 
 dotenv.config();
 
