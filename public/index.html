@@ -13,7 +13,7 @@
         // Hata sabitlerini saklamak için değişken
         let FP_ERRORS = {};
         
-        const fpPromise = import('https://fpjscdn.net/v3/YOUR_REAL_API_KEY')
+        const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
             .then(FingerprintJS => {
                 // Hata sabitlerini sakla
                 FP_ERRORS = {
@@ -22,7 +22,7 @@
                 };
                 return FingerprintJS.load();
             });
-
+        
         fpPromise
             .then(fp => fp.get())
             .then(result => {
