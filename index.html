@@ -1,27 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Detection Test</title>
-</head>
-<body>
-    <h1>Bot Detection Test</h1>
-    <script>
-        const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
-            .then(FingerprintJS => FingerprintJS.load());
+<script>
+  const fpPromise = import('https://fpjscdn.net/v3/YOUR_ACTUAL_API_KEY')
+    .then(FingerprintJS => FingerprintJS.load());
 
-        fpPromise
-            .then(fp => fp.get())
-            .then(result => {
-                const requestId = result.requestId;
-                
-                // Server'a requestId ile istek yap
-                fetch(`/botd-test?requestId=${requestId}`)
-                    .then(response => response.json())
-                    .then(data => console.log("Server Yanıtı:", data))
-                    .catch(error => console.error("Hata:", error));
-            });
-    </script>
-</body>
-</html>
+  fpPromise
+    .then(fp => fp.get())
+    .then(result => {
+      const requestId = result.requestId;
+      
+      // Send only the requestId to your server
+      fetch(`/botd-test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ requestId })
+      })
+        .then(response => response.json())
+        .then(data => console.log("Server Response:", data))
+        .catch(error => console.error("Error:", error));
+    })
+    .catch(error => {
+      // Handle errors from the JavaScript agent
+      console.error("Fingerprint Error:", error);
+    });
+</script>
