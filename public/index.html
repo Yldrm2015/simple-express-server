@@ -9,10 +9,11 @@
     <h1>Bot Detection Test</h1>
     <p id="status">Detecting...</p>
 
-    <script>
-        // FingerprintJS API'yı yükleyelim
-        const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
-            .then(FingerprintJS => FingerprintJS.load());
+    <script type="module">
+        import * as FingerprintJS from 'https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY';
+
+        // FingerprintJS yükleniyor
+        const fpPromise = FingerprintJS.load();
 
         fpPromise
             .then(fp => fp.get())
