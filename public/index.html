@@ -8,14 +8,15 @@
 <body>
     <h1>Bot Detection Test</h1>
     <p id="status">Detecting...</p>
+    <p id="previous-request">Previous Request ID: None</p>
 
     <script>
-        // Hata sabitlerini saklamak için değişken
         let FP_ERRORS = {};
+        let previousRequestId = localStorage.getItem("previousRequestId") || "None";
+        document.getElementById("previous-request").innerText = "Previous Request ID: " + previousRequestId;
         
         const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
             .then(FingerprintJS => {
-                // Hata sabitlerini sakla
                 FP_ERRORS = {
                     GENERAL_SERVER_FAILURE: FingerprintJS.ERROR_GENERAL_SERVER_FAILURE,
                     CLIENT_TIMEOUT: FingerprintJS.ERROR_CLIENT_TIMEOUT
@@ -28,6 +29,7 @@
             .then(result => {
                 console.log("✅ FingerprintJS Sonucu:", result);
                 const requestId = result.requestId;
+                localStorage.setItem("previousRequestId", requestId);
                 document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
                 
                 return fetch('/botd-test', {
