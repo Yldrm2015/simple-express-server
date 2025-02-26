@@ -4,19 +4,13 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const NodeCache = require("node-cache");
-let parseIp;
 
 dotenv.config();
 
-try {
-  parseIp = require("./utils").parseIp;
-} catch (err) {
-  console.warn("⚠️ Warning: utils.js dosyası bulunamadı, parseIp fonksiyonu devre dışı.");
-  parseIp = (req) => req.headers["x-forwarded-for"]?.split(",").shift() || req.socket.remoteAddress;
-}
+const parseIp = (req) => req.headers["x-forwarded-for"]?.split(",").shift() || req.socket.remoteAddress;
 
 const app = express();
-const requestIdDatabase = new NodeCache({ stdTTL: 300 }); // Request ID caching to prevent replay attacks
+const requestIdDatabase = new NodeCache({ stdTTL: 300 }); // Cache to prevent replay attacks
 app.use(cors({
   origin: process.env.NODE_ENV === "production" ? "https://yourwebsite.com" : true,
 }));
@@ -33,8 +27,12 @@ const MIN_CONFIDENCE_SCORE = 0.6;
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
 async function validateFingerprintResult(requestId, request) {
+  if (!FINGERPRINT_SECRET_KEY) {
+    return { success: false, error: "FingerprintJS API Key missing!" };
+  }
+
   if (requestIdDatabase.has(requestId)) {
-    return { success: false, error: "Already processed this request ID, potential replay attack" };
+    return { success: false, error: "Already processed this request ID, potential replay attack." };
   }
   
   let attempts = 3;
@@ -60,11 +58,7 @@ async function validateFingerprintResult(requestId, request) {
 
       const identificationOrigin = new URL(identification.url).origin;
       const requestOrigin = request.headers.origin;
-      if (
-        identificationOrigin !== requestOrigin ||
-        identificationOrigin !== ALLOWED_ORIGIN ||
-        requestOrigin !== ALLOWED_ORIGIN
-      ) {
+      if (identificationOrigin !== ALLOWED_ORIGIN || requestOrigin !== ALLOWED_ORIGIN) {
         return { success: false, error: "Unexpected origin, potential replay attack." };
       }
 
@@ -81,12 +75,8 @@ async function validateFingerprintResult(requestId, request) {
       requestIdDatabase.set(requestId, true);
       return { success: true, identificationEvent };
     } catch (error) {
-      if (error.response?.status === 400 && error.response.data?.code === "StateNotReady") {
-        console.warn("StateNotReady detected, retrying...");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        attempts--;
-      } else {
-        switch (error.response?.status) {
+      if (error.response) {
+        switch (error.response.status) {
           case 403:
             return { success: false, error: "Access forbidden - check your API permissions" };
           case 404:
@@ -94,11 +84,19 @@ async function validateFingerprintResult(requestId, request) {
           case 429:
             return { success: false, error: "Too many requests" };
           case 400:
-            return { success: false, error: "Bad request" };
+            if (error.response.data?.code === "StateNotReady") {
+              console.warn("StateNotReady detected, retrying...");
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              attempts--;
+            } else {
+              return { success: false, error: "Bad request" };
+            }
+            break;
           default:
-            return { success: false, error: "API error", details: error.response?.data || error.message };
+            return { success: false, error: "API error", details: error.response.data };
         }
       }
+      return { success: false, error: "Network error, check server connection." };
     }
   }
   return { success: false, error: "StateNotReady retries exceeded, request failed." };
