@@ -23,9 +23,10 @@ app.use(express.static(path.join(__dirname, "public")));
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
 const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 30 * 60 * 1000; // 30 dakika
-const ALLOWED_ORIGINS = ["https://yourwebsite.com"];
+const ALLOWED_ORIGIN = "https://yourwebsite.com"; // Üretim ortamı için
+const NODE_ENV = process.env.NODE_ENV || "development"; // Varsayılan olarak geliştirme
 
-console.log("✅ Sunucu başlatıldı!");
+console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
 // 📌 **FingerprintJS Sonuçlarını Doğrulama Fonksiyonu**
 function validateFingerprintResult(identificationEvent, request) {
@@ -40,18 +41,16 @@ function validateFingerprintResult(identificationEvent, request) {
     return { okay: false, error: "Expired request, potential replay attack." };
   }
 
-  // Origin doğrulama
-  const visitorOrigin = new URL(identification.url).origin;
-  const requestOrigin = request.headers["origin"];
-  if (!ALLOWED_ORIGINS.includes(visitorOrigin) || visitorOrigin !== requestOrigin) {
-    return { okay: false, error: "Invalid origin, potential replay attack." };
-  }
+  // **Origin doğrulama (Geliştirme ve Üretim Ortamlarına Göre)**
+  const identificationOrigin = new URL(identification.url).origin;
+  const requestOrigin = request.headers.origin;
 
-  // IP doğrulama
-  const identificationIp = identification.ip;
-  const requestIp = parseIp(request);
-  if (identificationIp !== requestIp) {
-    return { okay: false, error: "Unexpected IP address, potential replay attack." };
+  if (NODE_ENV === "production") {
+    if (identificationOrigin !== ALLOWED_ORIGIN) {
+      return { okay: false, error: "Unexpected origin, potential replay attack." };
+    }
+  } else if (identificationOrigin !== requestOrigin) {
+    return { okay: false, error: "Origin mismatch, potential replay attack." };
   }
 
   return { okay: true };
