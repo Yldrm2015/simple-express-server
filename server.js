@@ -27,27 +27,31 @@ const MIN_CONFIDENCE_SCORE = 0.6;
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
 async function validateFingerprintResult(requestId, request) {
+  console.log("🔍 Gelen Request ID:", requestId);
+  
   if (!FINGERPRINT_SECRET_KEY) {
+    console.error("❌ Hata: FingerprintJS API Key eksik!");
     return { success: false, error: "FingerprintJS API Key missing!" };
   }
 
   if (requestIdDatabase.has(requestId)) {
+    console.warn("⚠️ Tekrar Kullanılan Request ID:", requestId);
     return { success: false, error: "Already processed this request ID, potential replay attack." };
   }
-  
+
   let attempts = 3;
   while (attempts > 0) {
     try {
+      console.log("🔄 API'ye istek gönderiliyor, deneme:", 4 - attempts);
       await new Promise(resolve => setTimeout(resolve, 2000));
       const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
-        headers: {
-          "Auth-API-Key": FINGERPRINT_SECRET_KEY,
-          Accept: "application/json",
-        },
+        headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
       });
 
       const identificationEvent = response.data;
+      console.log("🔎 API Yanıtı Alındı:", identificationEvent);
       const identification = identificationEvent.products?.identification?.data;
+
       if (!identification) {
         return { success: false, error: "Identification event not found, potential spoofing attack." };
       }
@@ -56,15 +60,11 @@ async function validateFingerprintResult(requestId, request) {
         return { success: false, error: "Old identification request, potential replay attack." };
       }
 
-      const identificationOrigin = new URL(identification.url).origin;
-      const requestOrigin = request.headers.origin;
-      if (identificationOrigin !== ALLOWED_ORIGIN || requestOrigin !== ALLOWED_ORIGIN) {
+      if (new URL(identification.url).origin !== ALLOWED_ORIGIN || request.headers.origin !== ALLOWED_ORIGIN) {
         return { success: false, error: "Unexpected origin, potential replay attack." };
       }
 
-      const identificationIp = identification.ip;
-      const requestIp = parseIp(request);
-      if (identificationIp !== requestIp) {
+      if (identification.ip !== parseIp(request)) {
         return { success: false, error: "Unexpected IP address, potential replay attack." };
       }
 
@@ -75,28 +75,8 @@ async function validateFingerprintResult(requestId, request) {
       requestIdDatabase.set(requestId, true);
       return { success: true, identificationEvent };
     } catch (error) {
-      if (error.response) {
-        switch (error.response.status) {
-          case 403:
-            return { success: false, error: "Access forbidden - check your API permissions" };
-          case 404:
-            return { success: false, error: "Request ID not found" };
-          case 429:
-            return { success: false, error: "Too many requests" };
-          case 400:
-            if (error.response.data?.code === "StateNotReady") {
-              console.warn("StateNotReady detected, retrying...");
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              attempts--;
-            } else {
-              return { success: false, error: "Bad request" };
-            }
-            break;
-          default:
-            return { success: false, error: "API error", details: error.response.data };
-        }
-      }
-      return { success: false, error: "Network error, check server connection." };
+      console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
+      return { success: false, error: error.response?.data?.message || "API request failed" };
     }
   }
   return { success: false, error: "StateNotReady retries exceeded, request failed." };
@@ -104,28 +84,26 @@ async function validateFingerprintResult(requestId, request) {
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
+  console.log("🔍 Yeni İstek Alındı! Request ID:", requestId);
+  
   if (!requestId) {
+    console.warn("❌ Hata: Request ID eksik!");
     return res.status(400).json({ error: "Request ID eksik! Lütfen client-side identification gerçekleştirin." });
   }
 
   const validationResult = await validateFingerprintResult(requestId, req);
+  console.log("🔎 Validation Sonucu:", validationResult);
+  
   if (!validationResult.success) {
+    console.warn("❌ Doğrulama Başarısız:", validationResult.error);
     return res.status(403).json({ error: validationResult.error });
   }
 
   const identificationEvent = validationResult.identificationEvent;
 
   if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
+    console.warn("🚨 Kötü Bot Tespit Edildi!");
     return res.status(403).json({ error: "Malicious bot detected." });
-  }
-  if (identificationEvent.products?.vpn?.data?.result === true) {
-    return res.status(403).json({ error: "VPN network detected." });
-  }
-  if (identificationEvent.products?.tor?.data?.result === true) {
-    return res.status(403).json({ error: "Tor network detected." });
-  }
-  if (identificationEvent.products?.tampering?.data?.result === true) {
-    return res.status(403).json({ error: "Browser tampering detected." });
   }
 
   res.json({ status: "OK" });
