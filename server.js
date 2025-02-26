@@ -3,6 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
+const { createClient } = require("redis");
 let parseIp;
 
 dotenv.config();
@@ -23,7 +24,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const MIN_CONFIDENCE_SCORE = process.env.MIN_CONFIDENCE_SCORE || 0.5;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 300000; // 300 saniye (5 dakika)
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniye
 const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
@@ -32,13 +33,47 @@ if (!FINGERPRINT_SECRET_KEY) {
   process.exit(1);
 }
 
-// İşlenen Request ID'leri süreli olarak saklamak için Map()
-const requestIdDatabase = new Map();
+// Redis ile işlenen Request ID'leri depolamak
+const redisClient = createClient({
+  url: process.env.REDIS_URL || "redis://127.0.0.1:6379"
+});
 
-// İşlenen requestId'yi belirli bir süre sonra sil
-function storeRequestId(requestId, ttl = 300000) { // 300 saniye (5 dakika)
-  requestIdDatabase.set(requestId, Date.now());
-  setTimeout(() => requestIdDatabase.delete(requestId), ttl);
+redisClient.on("error", (err) => console.error("❌ Redis Bağlantı Hatası:", err));
+
+redisClient.connect()
+  .then(() => console.log("✅ Redis'e başarıyla bağlandı!"))
+  .catch(err => console.error("❌ Redis bağlantı hatası:", err));
+
+/**
+ * 🔹 validateFingerprintResult: Fingerprint doğrulama işlemi
+ */
+function validateFingerprintResult(identificationEvent, request) {
+  const identification = identificationEvent.products?.identification?.data;
+
+  if (!identification) {
+    return { okay: false, error: "Identification event not found, potential spoofing attack." };
+  }
+
+  // Zaman damgası doğrulaması (5 dakikadan eski istekler reddedilir)
+  if (Date.now() - Number(new Date(identification.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
+    return { okay: false, error: "Old identification request, potential replay attack." };
+  }
+
+  // Origin doğrulaması
+  const identificationOrigin = new URL(identification.url).origin;
+  const requestOrigin = request.headers.origin;
+  if (identificationOrigin !== requestOrigin) {
+    return { okay: false, error: "Unexpected origin, potential replay attack." };
+  }
+
+  // IP doğrulaması
+  const identificationIp = identification.ip;
+  const requestIp = parseIp(request);
+  if (IPv4_REGEX.test(requestIp) && identificationIp !== requestIp) {
+    return { okay: false, error: "Unexpected IP address, potential replay attack." };
+  }
+
+  return { okay: true };
 }
 
 app.post("/botd-test", async (req, res) => {
@@ -48,72 +83,56 @@ app.post("/botd-test", async (req, res) => {
   }
 
   try {
-    // 1. Get the identification event from Server API
+    // 1️⃣ İlk olarak FingerprintJS API'sinden kimlik doğrulama verisini al
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
         Accept: "application/json",
       },
     });
-    
+
     if (!eventResponse.data) {
       return res.status(500).json({ error: "Invalid response from Fingerprint API" });
     }
 
     const identificationEvent = eventResponse.data;
 
-    // 2. Validate the identification result
+    // 2️⃣ Kimlik doğrulama sonucunu doğrula
     const { okay, error } = validateFingerprintResult(identificationEvent, req);
     if (!okay) {
       return res.status(403).json({ error });
     }
-    
-    // 3. Check if request ID was already processed
-    if (requestIdDatabase.has(requestId)) {
+
+    // 3️⃣ Daha önce işlenmiş mi? (Replay attack kontrolü)
+    const isProcessed = await redisClient.get(requestId);
+    if (isProcessed) {
       return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
     }
-    
-    // 4. Only store request ID after successful validation
-    storeRequestId(requestId);
-    
-    // 5. Then do timestamp and other security validations
-    const identificationData = identificationEvent.products?.identification?.data;
-    if (!identificationData) {
-      return res.status(403).json({ error: "Invalid identification data" });
+
+    // 4️⃣ Bot, VPN, Tor veya manipülasyon tespiti
+    const botResult = identificationEvent.products?.botd?.data?.bot?.result;
+    if (botResult === "bad") {
+      return res.status(403).json({ error: "Kötü bot tespit edildi." });
+    }
+    if (identificationEvent.products?.vpn?.data?.result === true) {
+      return res.status(403).json({ error: "VPN ağı tespit edildi." });
+    }
+    if (identificationEvent.products?.tor?.data?.result === true) {
+      return res.status(403).json({ error: "Tor ağı tespit edildi." });
+    }
+    if (identificationEvent.products?.tampering?.data?.result === true) {
+      return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
     }
 
-    if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
-      return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
-    }
+    // 5️⃣ Geçerli ise request ID'yi Redis'e kaydet (30 dakika sonra otomatik silinir)
+    await redisClient.setEx(requestId, 1800, "processed");
 
-    if (process.env.NODE_ENV === "production") {
-      if (identificationData.url && new URL(identificationData.url).origin !== ALLOWED_ORIGIN) {
-        return res.status(403).json({ error: "Beklenmeyen origin, potansiyel saldırı." });
-      }
-    } else {
-      const requestOrigin = req.headers.origin;
-      if (identificationData.url && new URL(identificationData.url).origin !== requestOrigin) {
-        return res.status(403).json({ error: "Origin mismatch, potansiyel saldırı." });
-      }
-    }
+    // 6️⃣ Sunucu başarılı yanıt döndür
+    res.json({ status: "OK", botResult });
 
-    const identificationIp = identificationData.ip;
-    const requestIp = parseIp(req);
-    if (IPv4_REGEX.test(requestIp) && identificationIp !== requestIp) {
-      return res.status(403).json({ error: "Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı." });
-    }
-
-    if (identificationData.confidence?.score < MIN_CONFIDENCE_SCORE) {
-      return res.status(403).json({ error: "Low confidence score, actions requires 2FA." });
-    }
-
-    res.json({ status: "OK", botResult: identificationEvent.products?.botd?.data?.bot?.result, confidenceScore: identificationData.confidence?.score });
   } catch (error) {
-    console.error("Full error details:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
+    console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
+
     if (error.response) {
       switch (error.response.status) {
         case 403:
@@ -123,9 +142,9 @@ app.post("/botd-test", async (req, res) => {
         case 429:
           return res.status(429).json({ error: "Too many requests" });
         default:
-          return res.status(500).json({ 
+          return res.status(500).json({
             error: "API error",
-            details: error.response.data
+            details: error.response.data,
           });
       }
     }
