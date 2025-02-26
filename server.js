@@ -21,16 +21,43 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // API Key ve Environment Kontrolleri
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
-const MIN_CONFIDENCE_SCORE = process.env.MIN_CONFIDENCE_SCORE || 0.5;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniye
-const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
-const ALLOWED_ORIGIN = "https://yourwebsite.com";
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 30 * 60 * 1000; // 30 dakika
+const ALLOWED_ORIGINS = ["https://yourwebsite.com"];
 
 console.log("✅ Sunucu başlatıldı!");
 
-// Redis bağlantısı KALDIRILDI! Eğer tekrar saldırı koruması istiyorsan Redis'i tekrar eklemelisin.
+// 📌 **FingerprintJS Sonuçlarını Doğrulama Fonksiyonu**
+function validateFingerprintResult(identificationEvent, request) {
+  const identification = identificationEvent.products?.identification?.data;
 
+  if (!identification) {
+    return { okay: false, error: "Identification event not found, potential spoofing attack." };
+  }
+
+  // Zaman damgası doğrulama (30 dakikadan eski olmamalı)
+  if (Date.now() - Number(new Date(identification.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
+    return { okay: false, error: "Expired request, potential replay attack." };
+  }
+
+  // Origin doğrulama
+  const visitorOrigin = new URL(identification.url).origin;
+  const requestOrigin = request.headers["origin"];
+  if (!ALLOWED_ORIGINS.includes(visitorOrigin) || visitorOrigin !== requestOrigin) {
+    return { okay: false, error: "Invalid origin, potential replay attack." };
+  }
+
+  // IP doğrulama
+  const identificationIp = identification.ip;
+  const requestIp = parseIp(request);
+  if (identificationIp !== requestIp) {
+    return { okay: false, error: "Unexpected IP address, potential replay attack." };
+  }
+
+  return { okay: true };
+}
+
+// 📌 **Bot Detection Endpoint**
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
   if (!requestId) {
@@ -40,7 +67,7 @@ app.post("/botd-test", async (req, res) => {
   try {
     console.log(`🔍 Request ID alındı: ${requestId}`);
 
-    // API'den event bilgilerini al
+    // 1️⃣ **Fingerprint API'den kimlik verisini al**
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
@@ -51,50 +78,23 @@ app.post("/botd-test", async (req, res) => {
     console.log("✅ API'den event bilgisi alındı!");
 
     const identificationEvent = eventResponse.data;
+
+    // 2️⃣ **Fingerprint verisini doğrula**
+    const { okay, error } = validateFingerprintResult(identificationEvent, req);
+    if (!okay) {
+      console.error(`❌ Doğrulama başarısız: ${error}`);
+      return res.status(403).json({ error });
+    }
+
     const botResult = identificationEvent.products?.botd?.data?.bot?.result;
-    const identificationData = identificationEvent.products?.identification?.data;
 
-    if (!identificationData) {
-      console.error("❌ Identification verisi eksik.");
-      return res.status(403).json({ error: "Identification verisi eksik." });
-    }
-
-    // Zaman Kontrolü (Replay Attack Önleme) - 120 saniye içinde olmalı
-    if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
-      console.error("❌ Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı.");
-      return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
-    }
-
-    if (process.env.NODE_ENV === "production") {
-      if (identificationData.url && new URL(identificationData.url).origin !== ALLOWED_ORIGIN) {
-        console.error("❌ Beklenmeyen origin, potansiyel saldırı.");
-        return res.status(403).json({ error: "Beklenmeyen origin, potansiyel saldırı." });
-      }
-    } else {
-      const requestOrigin = req.headers.origin;
-      if (identificationData.url && new URL(identificationData.url).origin !== requestOrigin) {
-        console.error("❌ Origin mismatch, potansiyel saldırı.");
-        return res.status(403).json({ error: "Origin mismatch, potansiyel saldırı." });
-      }
-    }
-
-    const identificationIp = identificationData.ip;
-    const requestIp = parseIp(req);
-    if (IPv4_REGEX.test(requestIp) && identificationIp !== requestIp) {
-      console.error("❌ Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı.");
-      return res.status(403).json({ error: "Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı." });
-    }
-
-    if (identificationData.confidence?.score < MIN_CONFIDENCE_SCORE) {
-      console.error("❌ Düşük güven puanı, ek doğrulama gerekiyor.");
-      return res.status(403).json({ error: "Low confidence score, actions requires 2FA." });
-    }
-
+    // 3️⃣ **Bot olup olmadığını kontrol et**
     if (botResult === "bad") {
       console.error("❌ Kötü bot tespit edildi.");
       return res.status(403).json({ error: "Kötü bot tespit edildi." });
     }
 
+    // 4️⃣ **VPN, TOR, ve Tarayıcı Manipülasyonu Kontrolü**
     if (identificationEvent.products?.vpn?.data?.result === true) {
       console.error("❌ VPN ağı tespit edildi.");
       return res.status(403).json({ error: "VPN ağı tespit edildi." });
@@ -110,7 +110,7 @@ app.post("/botd-test", async (req, res) => {
 
     console.log("✅ Bot tespit işlemi başarılı!");
 
-    res.json({ status: "OK", botResult, confidenceScore: identificationData.confidence?.score });
+    res.json({ status: "OK", botResult });
   } catch (error) {
     console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
 
@@ -133,10 +133,12 @@ app.post("/botd-test", async (req, res) => {
   }
 });
 
+// 📌 **Ana Sayfa Endpointi**
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// 📌 **Sunucu Dinleme**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
   console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
