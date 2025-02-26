@@ -3,7 +3,6 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
-const { createClient } = require("redis");
 let parseIp;
 
 dotenv.config();
@@ -24,7 +23,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const MIN_CONFIDENCE_SCORE = process.env.MIN_CONFIDENCE_SCORE || 0.5;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniye
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 300000; // 300 saniye (5 dakika)
 const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
@@ -33,8 +32,14 @@ if (!FINGERPRINT_SECRET_KEY) {
   process.exit(1);
 }
 
-// İşlenen Request ID'leri bellek içi veritabanında tutalım
-const requestIdDatabase = new Set();
+// İşlenen Request ID'leri süreli olarak saklamak için Map()
+const requestIdDatabase = new Map();
+
+// İşlenen requestId'yi belirli bir süre sonra sil
+function storeRequestId(requestId, ttl = 300000) { // 300 saniye (5 dakika)
+  requestIdDatabase.set(requestId, Date.now());
+  setTimeout(() => requestIdDatabase.delete(requestId), ttl);
+}
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
@@ -43,30 +48,30 @@ app.post("/botd-test", async (req, res) => {
   }
 
   try {
-    // Bellek içi veritabanında requestId olup olmadığını kontrol et
-    if (requestIdDatabase.has(requestId)) {
-      return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
-    }
-    
-    // requestId'yi işlenmiş olarak işaretle
-    requestIdDatabase.add(requestId);
-    
+    // 1. Get the identification event from Server API
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
         Accept: "application/json",
       },
     });
-
+    
     const identificationEvent = eventResponse.data;
-    const botResult = identificationEvent.products?.botd?.data?.bot?.result;
-    const identificationData = identificationEvent.products?.identification?.data;
 
+    // 2. Check if request ID was already processed
+    if (requestIdDatabase.has(requestId)) {
+      return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
+    }
+    
+    // requestId'yi işlenmiş olarak işaretle
+    storeRequestId(requestId);
+    
+    // 3. Then do timestamp and other security validations
+    const identificationData = identificationEvent.products?.identification?.data;
     if (!identificationData) {
       return res.status(403).json({ error: "Identification verisi eksik." });
     }
 
-    // Zaman Kontrolü (Replay Attack Önleme) - 120 saniye içinde olmalı
     if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
       return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
     }
@@ -92,21 +97,7 @@ app.post("/botd-test", async (req, res) => {
       return res.status(403).json({ error: "Low confidence score, actions requires 2FA." });
     }
 
-    if (botResult === "bad") {
-      return res.status(403).json({ error: "Kötü bot tespit edildi." });
-    }
-
-    if (identificationEvent.products?.vpn?.data?.result === true) {
-      return res.status(403).json({ error: "VPN ağı tespit edildi." });
-    }
-    if (identificationEvent.products?.tor?.data?.result === true) {
-      return res.status(403).json({ error: "Tor ağı tespit edildi." });
-    }
-    if (identificationEvent.products?.tampering?.data?.result === true) {
-      return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
-    }
-
-    res.json({ status: "OK", botResult, confidenceScore: identificationData.confidence?.score });
+    res.json({ status: "OK", botResult: identificationEvent.products?.botd?.data?.bot?.result, confidenceScore: identificationData.confidence?.score });
   } catch (error) {
     console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
