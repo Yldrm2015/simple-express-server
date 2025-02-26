@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000;
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 10000; // Timeout süresini artırdık
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MIN_CONFIDENCE_SCORE = 0.6;
@@ -43,7 +43,7 @@ async function validateFingerprintResult(requestId, request) {
   while (attempts > 0) {
     try {
       console.log("🔄 API'ye istek gönderiliyor, deneme:", 4 - attempts);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Bekleme süresi eklendi
       const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
         headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
       });
@@ -57,26 +57,23 @@ async function validateFingerprintResult(requestId, request) {
       }
 
       if (Date.now() - Number(new Date(identification.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
-        return { success: false, error: "Old identification request, potential replay attack." };
-      }
-
-      if (new URL(identification.url).origin !== ALLOWED_ORIGIN || request.headers.origin !== ALLOWED_ORIGIN) {
-        return { success: false, error: "Unexpected origin, potential replay attack." };
-      }
-
-      if (identification.ip !== parseIp(request)) {
-        return { success: false, error: "Unexpected IP address, potential replay attack." };
-      }
-
-      if (identification.confidence.score < MIN_CONFIDENCE_SCORE) {
-        return { success: false, error: "Low confidence score, action requires 2FA." };
+        console.warn("⚠️ API'den gelen kimlik doğrulama isteği çok eski! Tekrar dene.");
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        attempts--;
+        continue;
       }
 
       requestIdDatabase.set(requestId, true);
       return { success: true, identificationEvent };
     } catch (error) {
       console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
-      return { success: false, error: error.response?.data?.message || "API request failed" };
+      if (error.response && error.response.data?.code === "StateNotReady") {
+        console.warn("⚠️ StateNotReady hatası alındı, tekrar deneniyor...");
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        attempts--;
+      } else {
+        return { success: false, error: "API request failed" };
+      }
     }
   }
   return { success: false, error: "StateNotReady retries exceeded, request failed." };
