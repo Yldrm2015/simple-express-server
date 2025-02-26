@@ -31,9 +31,9 @@ async function validateFingerprintResult(requestId, request) {
     return { success: false, error: "FingerprintJS API Key missing!" };
   }
 
- // if (requestIdDatabase.has(requestId)) {
-   // return { success: false, error: "Already processed this request ID, potential replay attack." };
-  //}
+  if (requestIdDatabase.has(requestId)) {
+    return { success: false, error: "Already processed this request ID, potential replay attack." };
+  }
   
   let attempts = 3;
   while (attempts > 0) {
