@@ -4,7 +4,8 @@
   "description": "BotD test sunucusu",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "npm install"
   },
   "dependencies": {
     "redis": "^4.6.7",
@@ -13,9 +14,9 @@
     "axios": "^1.4.0",
     "dotenv": "^16.0.3",
     "node-cache": "^5.1.2",
-    "@fingerprintjs/fingerprintjs-pro-server-api": "^3.3.0"
+    "@fingerprintjs/fingerprintjs-pro-server-api": "^2.0.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": "18.x"
   }
 }
