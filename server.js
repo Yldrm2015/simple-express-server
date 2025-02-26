@@ -33,16 +33,8 @@ if (!FINGERPRINT_SECRET_KEY) {
   process.exit(1);
 }
 
-// Redis ile işlenen Request ID'leri depolamak
-const redisClient = createClient({
-  url: process.env.REDIS_URL || "redis://localhost:6379" // Use localhost for development
-});
-
-redisClient.on("error", (err) => console.error("❌ Redis Bağlantı Hatası:", err));
-
-redisClient.connect()
-  .then(() => console.log("✅ Redis'e başarıyla bağlandı!"))
-  .catch(err => console.error("❌ Redis bağlantı hatası:", err));
+// İşlenen Request ID'leri bellek içi veritabanında tutalım
+const requestIdDatabase = new Set();
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
@@ -51,12 +43,14 @@ app.post("/botd-test", async (req, res) => {
   }
 
   try {
-    // Redis veritabanında requestId olup olmadığını kontrol et
-    const isProcessed = await redisClient.get(requestId);
-    if (isProcessed) {
+    // Bellek içi veritabanında requestId olup olmadığını kontrol et
+    if (requestIdDatabase.has(requestId)) {
       return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
     }
-
+    
+    // requestId'yi işlenmiş olarak işaretle
+    requestIdDatabase.add(requestId);
+    
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
@@ -76,9 +70,6 @@ app.post("/botd-test", async (req, res) => {
     if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
       return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
     }
-
-    // Redis'e requestId ekle (30 dakika sonra otomatik silinecek)
-    await redisClient.setEx(requestId, 1800, "processed");
 
     if (process.env.NODE_ENV === "production") {
       if (identificationData.url && new URL(identificationData.url).origin !== ALLOWED_ORIGIN) {
