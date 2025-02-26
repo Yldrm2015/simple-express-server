@@ -34,9 +34,14 @@ if (!FINGERPRINT_SECRET_KEY) {
 }
 
 // Redis ile işlenen Request ID'leri depolamak
-const redisClient = createClient();
-url: process.env.REDIS_URL || "redis://127.0.0.1:6379"
+const redisClient = createClient({url: process.env.REDIS_URL || "redis://127.0.0.1:6379"});
 redisClient.connect().catch(console.error);
+
+redisClient.on("error", (err) => console.error("❌ Redis Bağlantı Hatası:", err));
+
+redisClient.connect()
+  .then(() => console.log("✅ Redis'e başarıyla bağlandı!"))
+  .catch(err => console.error("❌ Redis bağlantı hatası:", err));
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
