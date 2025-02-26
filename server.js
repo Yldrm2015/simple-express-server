@@ -15,43 +15,87 @@ try {
 }
 
 const app = express();
-app.use(cors({
-  origin: process.env.NODE_ENV === "production" ? "https://yourwebsite.com" : true,
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// API Key ve Environment Kontrolleri
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000; // Shorter timeout to avoid StateNotReady error
-const ALLOWED_ORIGIN = "https://yourwebsite.com";
-const NODE_ENV = process.env.NODE_ENV || "development";
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 3000; // 3 saniye (tekrar saldırılarını önlemek için)
+const NODE_ENV = process.env.NODE_ENV || "development"; // Varsayılan olarak geliştirme
+
+// **Origin Doğrulama**
+const ALLOWED_ORIGIN = NODE_ENV === "production" ? "https://yourwebsite.com" : null;
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
-function validateFingerprintResult(identificationEvent, request) {
-  const identification = identificationEvent.products?.identification?.data;
-  if (!identification) {
+// 📌 **FingerprintJS Sonuçlarını Doğrulama Fonksiyonu**
+async function validateFingerprintResult(requestId, request) {
+  let identificationEvent;
+  let retryCount = 0;
+  const maxRetries = 3; // **Maksimum 3 kez tekrar dene**
+  const retryDelay = 1000; // **1 saniye bekleme süresi**
+
+  while (retryCount < maxRetries) {
+    try {
+      // 🔍 **FingerprintJS API'den tanımlama olayını al**
+      const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
+        headers: {
+          "Auth-API-Key": FINGERPRINT_SECRET_KEY,
+          Accept: "application/json",
+        },
+      });
+
+      identificationEvent = eventResponse.data;
+
+      // 🟢 **Eğer tanımlama olayı mevcutsa çıkış yap**
+      if (identificationEvent.products?.identification?.data) break;
+    } catch (error) {
+      // 🔴 **Eğer StateNotReady hatası varsa, yeniden dene**
+      if (error.response?.status === 403 && error.response?.data?.code === "StateNotReady") {
+        console.warn(`⚠️ Tanımlama olayı hazır değil, ${retryDelay / 1000} saniye bekleniyor...`);
+        retryCount++;
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else {
+        console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
+        return { okay: false, error: "Fingerprint API error" };
+      }
+    }
+  }
+
+  if (!identificationEvent || !identificationEvent.products?.identification?.data) {
+    console.error("❌ Tanımlama olayı alınamadı!");
     return { okay: false, error: "Identification event not found, potential spoofing attack." };
   }
 
+  const identification = identificationEvent.products?.identification?.data;
+
+  // **Zaman damgası doğrulama (3 saniyeden eski olmamalı)**
   if (Date.now() - Number(new Date(identification.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
-    return { okay: false, error: "Old identification request, potential replay attack." };
+    return { okay: false, error: "Expired request, potential replay attack." };
   }
 
+  // **Origin doğrulama**
   const identificationOrigin = new URL(identification.url).origin;
   const requestOrigin = request.headers.origin;
-  if (
-    identificationOrigin !== requestOrigin ||
-    identificationOrigin !== ALLOWED_ORIGIN ||
-    requestOrigin !== ALLOWED_ORIGIN
-  ) {
-    return { okay: false, error: "Unexpected origin, potential replay attack." };
+
+  console.log(`🟡 Debug: Request Origin: ${requestOrigin}, Identification Origin: ${identificationOrigin}`);
+
+  if (NODE_ENV === "production") {
+    if (identificationOrigin !== ALLOWED_ORIGIN) {
+      console.error("❌ Origin Hatası: Beklenmeyen origin üretim ortamında tespit edildi.");
+      return { okay: false, error: "Unexpected origin, potential replay attack." };
+    }
+  } else if (identificationOrigin !== requestOrigin) {
+    console.error("❌ Origin Hatası: Beklenmeyen origin geliştirme ortamında tespit edildi.");
+    return { okay: false, error: "Origin mismatch, potential replay attack." };
   }
 
-  return { okay: true };
+  return { okay: true, identificationEvent };
 }
 
+// 📌 **Bot Detection Endpoint**
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
   if (!requestId) {
@@ -61,35 +105,40 @@ app.post("/botd-test", async (req, res) => {
   try {
     console.log(`🔍 Request ID alındı: ${requestId}`);
 
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to avoid StateNotReady error
-    
-    const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
-      headers: {
-        "Auth-API-Key": FINGERPRINT_SECRET_KEY,
-        Accept: "application/json",
-      },
-    });
-
-    console.log("✅ API'den event bilgisi alındı!");
-
-    const identificationEvent = eventResponse.data;
-    const { okay, error } = validateFingerprintResult(identificationEvent, req);
+    // 1️⃣ **FingerprintJS verisini doğrula**
+    const { okay, error, identificationEvent } = await validateFingerprintResult(requestId, req);
     if (!okay) {
       console.error(`❌ Doğrulama başarısız: ${error}`);
       return res.status(403).json({ error });
     }
 
-    if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
-      return res.status(403).json({ error: "Malicious bot detected" });
+    const botResult = identificationEvent.products?.botd?.data?.bot?.result;
+
+    // 2️⃣ **Bot olup olmadığını kontrol et**
+    if (botResult === "bad") {
+      console.error("❌ Kötü bot tespit edildi.");
+      return res.status(403).json({ error: "Kötü bot tespit edildi." });
     }
 
+    // 3️⃣ **VPN, TOR, ve Tarayıcı Manipülasyonu Kontrolü**
     if (identificationEvent.products?.vpn?.data?.result === true) {
-      return res.status(403).json({ error: "VPN network detected" });
+      console.error("❌ VPN ağı tespit edildi.");
+      return res.status(403).json({ error: "VPN ağı tespit edildi." });
+    }
+    if (identificationEvent.products?.tor?.data?.result === true) {
+      console.error("❌ Tor ağı tespit edildi.");
+      return res.status(403).json({ error: "Tor ağı tespit edildi." });
+    }
+    if (identificationEvent.products?.tampering?.data?.result === true) {
+      console.error("❌ Tarayıcı müdahalesi tespit edildi.");
+      return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
     }
 
-    res.json({ status: "OK" });
+    console.log("✅ Bot tespit işlemi başarılı!");
+    res.json({ status: "OK", botResult });
   } catch (error) {
     console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
+
     if (error.response) {
       switch (error.response.status) {
         case 403:
@@ -98,8 +147,6 @@ app.post("/botd-test", async (req, res) => {
           return res.status(404).json({ error: "Request ID not found" });
         case 429:
           return res.status(429).json({ error: "Too many requests" });
-        case 400:
-          return res.status(400).json({ error: "StateNotReady - Request is not yet ready, try again later." });
         default:
           return res.status(500).json({ error: "API error", details: error.response.data });
       }
@@ -108,10 +155,12 @@ app.post("/botd-test", async (req, res) => {
   }
 });
 
+// 📌 **Ana Sayfa Endpointi**
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// 📌 **Sunucu Dinleme**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
   console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
