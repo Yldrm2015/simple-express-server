@@ -57,16 +57,22 @@ app.post("/botd-test", async (req, res) => {
     });
     
     const identificationEvent = eventResponse.data;
-
-    // 2. Check if request ID was already processed
+    
+    // 2. Validate the identification result
+    const { okay, error } = validateFingerprintResult(identificationEvent, req);
+    if (!okay) {
+      return res.status(403).json({ error });
+    }
+    
+    // 3. Check if request ID was already processed
     if (requestIdDatabase.has(requestId)) {
       return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
     }
     
-    // requestId'yi işlenmiş olarak işaretle
+    // 4. Only store request ID after successful validation
     storeRequestId(requestId);
     
-    // 3. Then do timestamp and other security validations
+    // 5. Then do timestamp and other security validations
     const identificationData = identificationEvent.products?.identification?.data;
     if (!identificationData) {
       return res.status(403).json({ error: "Identification verisi eksik." });
