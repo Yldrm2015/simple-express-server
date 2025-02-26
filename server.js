@@ -3,7 +3,6 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
-const { createClient } = require("redis");
 let parseIp;
 
 dotenv.config();
@@ -28,28 +27,9 @@ const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniye
 const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
-// Redis Bağlantısını Başlat
-let redisClient;
-let redisConnected = false;
+console.log("✅ Sunucu başlatıldı!");
 
-(async () => {
-  try {
-    redisClient = createClient({
-      url: process.env.REDIS_URL || "redis://127.0.0.1:6379"
-    });
-
-    redisClient.on("error", (err) => {
-      console.error("❌ Redis Bağlantı Hatası:", err.message);
-    });
-
-    await redisClient.connect();
-    redisConnected = true;
-    console.log("✅ Redis'e başarıyla bağlandı!");
-  } catch (error) {
-    console.error("❌ Redis bağlantı hatası:", error.message);
-    redisConnected = false;
-  }
-})();
+// Redis bağlantısı KALDIRILDI! Eğer tekrar saldırı koruması istiyorsan Redis'i tekrar eklemelisin.
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
@@ -58,6 +38,9 @@ app.post("/botd-test", async (req, res) => {
   }
 
   try {
+    console.log(`🔍 Request ID alındı: ${requestId}`);
+
+    // API'den event bilgilerini al
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
@@ -65,39 +48,32 @@ app.post("/botd-test", async (req, res) => {
       },
     });
 
+    console.log("✅ API'den event bilgisi alındı!");
+
     const identificationEvent = eventResponse.data;
     const botResult = identificationEvent.products?.botd?.data?.bot?.result;
     const identificationData = identificationEvent.products?.identification?.data;
 
     if (!identificationData) {
+      console.error("❌ Identification verisi eksik.");
       return res.status(403).json({ error: "Identification verisi eksik." });
     }
 
     // Zaman Kontrolü (Replay Attack Önleme) - 120 saniye içinde olmalı
     if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
+      console.error("❌ Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı.");
       return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
-    }
-
-    // Redis Bağlantısı varsa requestId kontrolü yap
-    if (redisConnected) {
-      const isProcessed = await redisClient.get(requestId);
-      if (isProcessed) {
-        return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
-      }
-
-      // Redis'e requestId ekle (30 dakika sonra otomatik silinecek)
-      await redisClient.setEx(requestId, 1800, "processed");
-    } else {
-      console.warn("⚠️ Redis bağlantısı yok, tekrar saldırı kontrolü yapılmıyor.");
     }
 
     if (process.env.NODE_ENV === "production") {
       if (identificationData.url && new URL(identificationData.url).origin !== ALLOWED_ORIGIN) {
+        console.error("❌ Beklenmeyen origin, potansiyel saldırı.");
         return res.status(403).json({ error: "Beklenmeyen origin, potansiyel saldırı." });
       }
     } else {
       const requestOrigin = req.headers.origin;
       if (identificationData.url && new URL(identificationData.url).origin !== requestOrigin) {
+        console.error("❌ Origin mismatch, potansiyel saldırı.");
         return res.status(403).json({ error: "Origin mismatch, potansiyel saldırı." });
       }
     }
@@ -105,37 +81,55 @@ app.post("/botd-test", async (req, res) => {
     const identificationIp = identificationData.ip;
     const requestIp = parseIp(req);
     if (IPv4_REGEX.test(requestIp) && identificationIp !== requestIp) {
+      console.error("❌ Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı.");
       return res.status(403).json({ error: "Beklenmeyen IP adresi, potansiyel yeniden oynatma saldırısı." });
     }
 
     if (identificationData.confidence?.score < MIN_CONFIDENCE_SCORE) {
+      console.error("❌ Düşük güven puanı, ek doğrulama gerekiyor.");
       return res.status(403).json({ error: "Low confidence score, actions requires 2FA." });
     }
 
     if (botResult === "bad") {
+      console.error("❌ Kötü bot tespit edildi.");
       return res.status(403).json({ error: "Kötü bot tespit edildi." });
     }
 
     if (identificationEvent.products?.vpn?.data?.result === true) {
+      console.error("❌ VPN ağı tespit edildi.");
       return res.status(403).json({ error: "VPN ağı tespit edildi." });
     }
     if (identificationEvent.products?.tor?.data?.result === true) {
+      console.error("❌ Tor ağı tespit edildi.");
       return res.status(403).json({ error: "Tor ağı tespit edildi." });
     }
     if (identificationEvent.products?.tampering?.data?.result === true) {
+      console.error("❌ Tarayıcı müdahalesi tespit edildi.");
       return res.status(403).json({ error: "Tarayıcı müdahalesi tespit edildi." });
     }
 
+    console.log("✅ Bot tespit işlemi başarılı!");
+
     res.json({ status: "OK", botResult, confidenceScore: identificationData.confidence?.score });
   } catch (error) {
-    console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
-    if (error.response && error.response.status === 401) {
-      return res.status(500).json({ error: "Authentication failed - check your API key" });
+    console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
+
+    if (error.response) {
+      switch (error.response.status) {
+        case 403:
+          return res.status(403).json({ error: "Access forbidden - check your API permissions" });
+        case 404:
+          return res.status(404).json({ error: "Request ID not found" });
+        case 429:
+          return res.status(429).json({ error: "Too many requests" });
+        default:
+          return res.status(500).json({
+            error: "API error",
+            details: error.response.data,
+          });
+      }
     }
-    res.status(500).json({
-      error: "BotD API çalıştırılamadı!",
-      details: error.response ? error.response.data : error.message,
-    });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
