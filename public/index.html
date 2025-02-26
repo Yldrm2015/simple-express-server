@@ -7,13 +7,11 @@
 </head>
 <body>
     <h1>Bot Detection Test</h1>
+    <p id="request-id">Request ID: Waiting...</p>
     <p id="status">Detecting...</p>
-    <p id="previous-request">Previous Request ID: None</p>
 
     <script>
         let FP_ERRORS = {};
-        let previousRequestId = localStorage.getItem("previousRequestId") || "None";
-        document.getElementById("previous-request").innerText = "Previous Request ID: " + previousRequestId;
         
         const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
             .then(FingerprintJS => {
@@ -29,8 +27,7 @@
             .then(result => {
                 console.log("✅ FingerprintJS Sonucu:", result);
                 const requestId = result.requestId;
-                localStorage.setItem("previousRequestId", requestId);
-                document.getElementById("status").innerText = "Request ID Alındı: " + requestId;
+                document.getElementById("request-id").innerText = "Request ID: " + requestId;
                 
                 return fetch('/botd-test', {
                     method: 'POST',
@@ -52,17 +49,18 @@
             })
             .catch(error => {
                 console.error("❌ Hata:", error);
+                let errorMessage = "Hata oluştu: " + error.message;
+                
                 switch (error.message) {
                     case FP_ERRORS.GENERAL_SERVER_FAILURE:
-                        console.log('Bilinmeyen sunucu hatası. Request ID:', error.requestId);
+                        errorMessage = 'Bilinmeyen sunucu hatası.';
                         break;
                     case FP_ERRORS.CLIENT_TIMEOUT:
-                        console.log('Kimlik doğrulama süresi 10 saniyeyi aştı.');
+                        errorMessage = 'Kimlik doğrulama süresi 10 saniyeyi aştı.';
                         break;
-                    default:
-                        console.log('Diğer hata:', error.message);
                 }
-                document.getElementById("status").innerText = "Hata oluştu: " + error.message;
+                
+                document.getElementById("status").innerText = errorMessage;
             });
     </script>
 </body>
