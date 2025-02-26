@@ -35,7 +35,7 @@ if (!FINGERPRINT_SECRET_KEY) {
 
 // Redis ile işlenen Request ID'leri depolamak
 const redisClient = createClient({
-  url: process.env.REDIS_URL || "redis://your-redis-instance.render.com:6379"
+  url: process.env.REDIS_URL || "redis://localhost:6379" // Use localhost for development
 });
 
 redisClient.on("error", (err) => console.error("❌ Redis Bağlantı Hatası:", err));
