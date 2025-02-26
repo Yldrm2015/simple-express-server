@@ -56,8 +56,12 @@ app.post("/botd-test", async (req, res) => {
       },
     });
     
+    if (!eventResponse.data) {
+      return res.status(500).json({ error: "Invalid response from Fingerprint API" });
+    }
+
     const identificationEvent = eventResponse.data;
-    
+
     // 2. Validate the identification result
     const { okay, error } = validateFingerprintResult(identificationEvent, req);
     if (!okay) {
@@ -75,7 +79,7 @@ app.post("/botd-test", async (req, res) => {
     // 5. Then do timestamp and other security validations
     const identificationData = identificationEvent.products?.identification?.data;
     if (!identificationData) {
-      return res.status(403).json({ error: "Identification verisi eksik." });
+      return res.status(403).json({ error: "Invalid identification data" });
     }
 
     if (Date.now() - Number(new Date(identificationData.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
@@ -105,14 +109,27 @@ app.post("/botd-test", async (req, res) => {
 
     res.json({ status: "OK", botResult: identificationEvent.products?.botd?.data?.bot?.result, confidenceScore: identificationData.confidence?.score });
   } catch (error) {
-    console.error("FingerprintJS API Hatası:", error.response ? error.response.data : error.message);
-    if (error.response && error.response.status === 401) {
-      return res.status(500).json({ error: "Authentication failed - check your API key" });
-    }
-    res.status(500).json({
-      error: "BotD API çalıştırılamadı!",
-      details: error.response ? error.response.data : error.message,
+    console.error("Full error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
     });
+    if (error.response) {
+      switch (error.response.status) {
+        case 403:
+          return res.status(403).json({ error: "Access forbidden - check your API permissions" });
+        case 404:
+          return res.status(404).json({ error: "Request ID not found" });
+        case 429:
+          return res.status(429).json({ error: "Too many requests" });
+        default:
+          return res.status(500).json({ 
+            error: "API error",
+            details: error.response.data
+          });
+      }
+    }
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
