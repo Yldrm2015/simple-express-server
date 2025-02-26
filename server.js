@@ -35,6 +35,7 @@ if (!FINGERPRINT_SECRET_KEY) {
 
 // Redis ile işlenen Request ID'leri depolamak
 const redisClient = createClient();
+url: process.env.REDIS_URL || "redis://127.0.0.1:6379"
 redisClient.connect().catch(console.error);
 
 app.post("/botd-test", async (req, res) => {
