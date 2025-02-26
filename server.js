@@ -3,6 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
+const { createClient } = require("redis");
 let parseIp;
 
 dotenv.config();
@@ -23,7 +24,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const MIN_CONFIDENCE_SCORE = process.env.MIN_CONFIDENCE_SCORE || 0.5;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniyeye çıkardık
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 120000; // 120 saniye
 const IPv4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 
@@ -32,8 +33,9 @@ if (!FINGERPRINT_SECRET_KEY) {
   process.exit(1);
 }
 
-// Processed Request IDs - Replay Attack Koruması
-const processedRequestIds = new Set();
+// Redis ile işlenen Request ID'leri depolamak
+const redisClient = createClient();
+redisClient.connect().catch(console.error);
 
 app.post("/botd-test", async (req, res) => {
   const { requestId } = req.body;
@@ -41,12 +43,13 @@ app.post("/botd-test", async (req, res) => {
     return res.status(400).json({ error: "Request ID eksik! Lütfen client-side identification gerçekleştirin." });
   }
 
-  // Tekrar saldırılarını önlemek için requestId kontrolü
-  if (processedRequestIds.has(requestId)) {
-    return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
-  }
-
   try {
+    // Redis veritabanında requestId olup olmadığını kontrol et
+    const isProcessed = await redisClient.get(requestId);
+    if (isProcessed) {
+      return res.status(403).json({ error: "Bu request ID zaten işlendi, potansiyel tekrar saldırısı." });
+    }
+
     const eventResponse = await axios.get(`${API_ENDPOINT}${requestId}`, {
       headers: {
         "Auth-API-Key": FINGERPRINT_SECRET_KEY,
@@ -67,8 +70,8 @@ app.post("/botd-test", async (req, res) => {
       return res.status(403).json({ error: "Eski tanımlama isteği, potansiyel yeniden oynatma saldırısı." });
     }
 
-    // Request ID'yi işlendi olarak işaretle
-    processedRequestIds.add(requestId);
+    // Redis'e requestId ekle (30 dakika sonra otomatik silinecek)
+    await redisClient.setEx(requestId, 1800, "processed");
 
     if (process.env.NODE_ENV === "production") {
       if (identificationData.url && new URL(identificationData.url).origin !== ALLOWED_ORIGIN) {
