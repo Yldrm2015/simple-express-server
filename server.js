@@ -4,7 +4,6 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const requestIp = require("request-ip");
-const fs = require("fs");
 
 dotenv.config();
 
@@ -45,16 +44,69 @@ app.get("/", async (req, res) => {
 
         console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
-        // **index.html dosyasını oku ve içine tespit sonucunu ekle**
-        fs.readFile(path.join(__dirname, "public", "index.html"), "utf8", (err, html) => {
-            if (err) {
-                console.error("❌ [ERROR] Could not read index.html:", err);
-                return res.status(500).send("Server error loading page.");
-            }
+        // **HTML'yi Dinamik Olarak Sunucu Tarafında Üret**
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Bot Detection Test</title>
+            </head>
+            <body>
+                <h1>Bot Detection Test</h1>
 
-            html = html.replace("{{SERVER_RESULT}}", reason);
-            res.send(html);
-        });
+                <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
+                <p id="request-id">Request ID: Waiting...</p>
+                <p id="visitor-id">Visitor ID: Waiting...</p>
+                <p id="status">Detecting...</p>
+
+                <noscript>
+                    <p style="color: yellow; font-weight: bold;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+                </noscript>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", async () => {
+                        try {
+                            console.log("🔄 [INFO] Fetching BotD fingerprint...");
+
+                            const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
+                                .then(FingerprintJS => FingerprintJS.load());
+
+                            const fp = await fpPromise;
+                            const result = await fp.get();
+
+                            const requestId = result.requestId;
+                            const visitorId = result.visitorId;
+
+                            document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                            document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
+
+                            console.log("📡 [BOTD] Sending Request ID to server:", requestId);
+
+                            fetch('/botd-test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, visitorId })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("✅ [BOTD SUCCESS]:", data);
+                                document.getElementById("status").innerText = JSON.stringify(data, null, 2);
+                            })
+                            .catch(error => {
+                                console.error("❌ [BOTD ERROR]:", error);
+                                document.getElementById("status").innerText = "BotD Error: " + error.message;
+                            });
+                        } catch (error) {
+                            console.error("❌ [ERROR] FingerprintJS Error:", error);
+                            document.getElementById("status").innerText = "FingerprintJS Error: " + error.message;
+                        }
+                    });
+                </script>
+            </body>
+            </html>
+        `);
 
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
