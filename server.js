@@ -29,14 +29,24 @@ const MIN_CONFIDENCE_SCORE = 0.6;
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
 function getJA3Hash(socket) {
-    if (!socket || !socket.getPeerCertificate) return null;
+    if (!socket || !socket.getPeerCertificate) {
+        console.warn("❌ JA3 Fingerprint alınamadı: socket veya getPeerCertificate eksik!");
+        return null;
+    }
     
+    const cert = socket.getPeerCertificate();
+    if (!cert || !cert.fingerprint) {
+        console.warn("❌ JA3 Fingerprint alınamadı: Sertifika bilgisi eksik!");
+        return null;
+    }
+
     const fingerprintData = [
         socket.getProtocol(),
-        socket.getCipher().name,
-        socket.getPeerCertificate().fingerprint,
+        socket.getCipher() ? socket.getCipher().name : "unknown",
+        cert.fingerprint,
     ].join(',');
 
+    console.log("🔍 JA3 Fingerprint Hesaplandı:", fingerprintData);
     return crypto.createHash('md5').update(fingerprintData).digest('hex');
 }
 
