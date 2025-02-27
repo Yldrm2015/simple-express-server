@@ -8,7 +8,7 @@
 <body>
     <h1>Bot Detection Test</h1>
 
-    <p><strong>Sunucu Tespiti:</strong> <span id="server-side-status">{{SERVER_RESULT}}</span></p>
+    <p><strong>Sunucu Tespiti:</strong> Sunucu tarafından belirlenen sonuç burada olacak.</p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
     <p id="status">Detecting...</p>
@@ -18,23 +18,10 @@
     </noscript>
 
     <script>
-        // **🛡️ SUNUCU TARAFINDAN BOT ALGILAMA (JS Kapalı Olsa Bile Çalışır)**
-        fetch('/server-side-bot-detection')
-            .then(response => response.json())
-            .then(data => {
-                console.log("🔍 Sunucu Taraflı Tespit Sonucu:", data);
-                document.getElementById("server-side-status").innerText = 
-                    data.error ? "⚠️ Bot Detected: " + data.reason : "✅ Not a bot";
-            })
-            .catch(error => {
-                console.error("❌ Sunucu Tarafından Bot Kontrolü Başarısız:", error);
-                document.getElementById("server-side-status").innerText = "⚠️ Server error in bot detection!";
-            });
-
         // **🛡️ Tarayıcı Bot Algılama (FingerprintJS)**
         let FP_ERRORS = {};
-        
-        const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
+
+        const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
             .then(FingerprintJS => {
                 FP_ERRORS = {
                     GENERAL_SERVER_FAILURE: FingerprintJS.ERROR_GENERAL_SERVER_FAILURE,
@@ -42,7 +29,7 @@
                 };
                 return FingerprintJS.load();
             });
-        
+
         fpPromise
             .then(fp => fp.get())
             .then(result => {
@@ -52,7 +39,7 @@
 
                 document.getElementById("request-id").innerText = "Request ID: " + requestId;
                 document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
-                
+
                 return fetch('/botd-test', {
                     method: 'POST',
                     headers: {
