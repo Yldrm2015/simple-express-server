@@ -17,7 +17,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 10000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 const BOT_IP_LIST = new Set();
 const BOT_USER_AGENTS = [
@@ -27,7 +26,7 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
-// 🌟 **Global Middleware: Tüm İsteklerde Bot Tespiti Yap**
+// **🌟 Geliştirilmiş Middleware - Daha Hassas IP & User-Agent Kontrolü**
 app.use((req, res, next) => {
     const ip = parseIp(req);
     const userAgent = req.headers["user-agent"] || "Unknown";
@@ -49,11 +48,11 @@ app.use((req, res, next) => {
         reason = "Suspicious User-Agent detected.";
     }
 
-    // **Özel header'lar ile bot kontrolü (Gelişmiş tespit)**
-    const suspiciousHeaders = ["sec-fetch-mode", "sec-fetch-dest", "sec-fetch-site"];
-    if (!req.headers["accept-language"] || suspiciousHeaders.some(h => req.headers[h])) {
-        isBot = true;
-        reason = "Suspicious browser headers detected.";
+    // **Geliştirilmiş Kontrol (Yanlış Pozitifleri Önleme)**
+    // Eğer sadece User-Agent şüpheli ama IP temizse, kullanıcının normal olduğunu kabul edelim
+    if (isBot && !BOT_IP_LIST.has(ip)) {
+        console.log("⚠️ Potansiyel Bot Algılandı, Ama IP Güvenli!");
+        return next(); // Kullanıcıyı engelleme, sadece logla
     }
 
     if (isBot) {
