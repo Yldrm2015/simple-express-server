@@ -8,13 +8,17 @@
 <body>
     <h1>Bot Detection Test</h1>
 
-    <p id="server-side-status">Checking bot status on server...</p>
+    <p><strong>Sunucu Tespiti:</strong> <span id="server-side-status">{{SERVER_RESULT}}</span></p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
     <p id="status">Detecting...</p>
 
+    <noscript>
+        <p style="color: yellow; font-weight: bold;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+    </noscript>
+
     <script>
-        // **🛡️ SUNUCU TARAFINDAN BOT ALGILAMA (JavaScript Kapalı Olsa Bile Çalışır)**
+        // **🛡️ SUNUCU TARAFINDAN BOT ALGILAMA (JS Kapalı Olsa Bile Çalışır)**
         fetch('/server-side-bot-detection')
             .then(response => response.json())
             .then(data => {
