@@ -4,6 +4,7 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const NodeCache = require("node-cache");
+const ja3 = require("ja3");
 
 dotenv.config();
 
@@ -26,6 +27,30 @@ const MIN_CONFIDENCE_SCORE = 0.6;
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
+app.use((req, res, next) => {
+  try {
+    const fingerprint = ja3.getJA3Hash(req);
+    console.log("🔍 JA3 Fingerprint:", fingerprint);
+
+    // Bilinen bot fingerprint'leri buraya eklenebilir
+    const knownBotFingerprints = [
+      "d4e05f8ff88d63b3ff3c68b1d24f92bd",
+      "921f7b291ff8b1871f1ad88e78263546"
+    ];
+
+    if (knownBotFingerprints.includes(fingerprint)) {
+      console.warn("🚨 Bot JA3 Fingerprint Tespit Edildi:", fingerprint);
+      return res.status(403).json({ error: "Malicious bot detected (JA3 Fingerprint)" });
+    }
+
+    req.ja3Fingerprint = fingerprint;
+    next();
+  } catch (err) {
+    console.error("❌ JA3 Fingerprint alma hatası:", err);
+    next();
+  }
+});
+
 async function validateFingerprintResult(requestId, request) {
   console.log("🔍 Gelen Request ID:", requestId);
   
@@ -44,7 +69,7 @@ async function validateFingerprintResult(requestId, request) {
     try {
       console.log("🔄 API'ye istek gönderiliyor, deneme:", 4 - attempts);
       await new Promise(resolve => setTimeout(resolve, 3000)); // Bekleme süresi eklendi
-      const response = await axios.get(${API_ENDPOINT}${requestId}, {
+      const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
         headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
       });
 
@@ -103,7 +128,7 @@ app.post("/botd-test", async (req, res) => {
     return res.status(403).json({ error: "Malicious bot detected." });
   }
 
-  res.json({ status: "OK" });
+  res.json({ status: "OK", ja3: req.ja3Fingerprint });
 });
 
 app.get("/", (req, res) => {
@@ -112,5 +137,5 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
-  console.log(✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.);
-}); bu benim kodum ekleyip günceller misin
+  console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
+});
