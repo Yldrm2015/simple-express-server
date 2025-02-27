@@ -11,7 +11,9 @@ dotenv.config();
 const parseIp = (req) => req.headers["x-forwarded-for"]?.split(",").shift() || req.socket.remoteAddress;
 
 const app = express();
-const requestIdDatabase = new NodeCache({ stdTTL: 300 }); // Cache to prevent replay attacks
+const requestIdDatabase = new NodeCache({ stdTTL: 300 });
+const botRequestCache = new NodeCache({ stdTTL: 10, checkperiod: 10 }); // IP bazlı rate limiting
+
 app.use(cors({
   origin: process.env.NODE_ENV === "production" ? "https://yourwebsite.com" : true,
 }));
@@ -25,61 +27,57 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
-// IP + Fingerprint Hash hesaplama
-function hashFingerprint(visitorId, ip) {
-    return crypto.createHash('sha256').update((visitorId || "unknown") + ip).digest('hex');
+// **📌 Bilinen bot User-Agent listesi**
+const BOT_USER_AGENTS = [
+    "Googlebot", "Bingbot", "Slurp", "DuckDuckBot", "Baiduspider",
+    "YandexBot", "Sogou", "facebot", "facebookexternalhit", "ia_archiver",
+    "HeadlessChrome", "PhantomJS", "curl", "wget", "Python-urllib", "scrapy"
+];
+
+// **📌 IP + User-Agent Hash hesaplama**
+function hashFingerprint(visitorId, ip, userAgent) {
+    return crypto.createHash('sha256').update((visitorId || "unknown") + ip + userAgent).digest('hex');
 }
 
-// FingerprintJS doğrulama
-async function validateFingerprintResult(requestId, request) {
-    console.log("🔍 Gelen Request ID:", requestId);
+// **📌 Rate Limiting Fonksiyonu (Spam botları yakalamak için)**
+function isRateLimited(ip) {
+    const requestCount = botRequestCache.get(ip) || 0;
+    botRequestCache.set(ip, requestCount + 1);
 
-    if (!FINGERPRINT_SECRET_KEY) {
-        console.error("❌ Hata: FingerprintJS API Key eksik!");
-        return { success: false, error: "FingerprintJS API Key missing!" };
+    if (requestCount > 5) { // 10 saniyede 5'ten fazla istek atıyorsa bot olabilir
+        return true;
     }
-
-    let attempts = 3;
-    while (attempts > 0) {
-        try {
-            console.log("🔄 API'ye istek gönderiliyor, deneme:", 4 - attempts);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
-                headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
-            });
-
-            const identificationEvent = response.data;
-            console.log("🔎 API Yanıtı Alındı:", identificationEvent);
-            const identification = identificationEvent.products?.identification?.data;
-
-            if (!identification) {
-                return { success: false, error: "Identification event not found, potential spoofing attack." };
-            }
-
-            if (Date.now() - Number(new Date(identification.time)) > ALLOWED_REQUEST_TIMESTAMP_DIFF_MS) {
-                return { success: false, error: "Old identification request, potential replay attack." };
-            }
-
-            return { success: true, identificationEvent };
-        } catch (error) {
-            console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
-            if (error.response && error.response.data?.code === "StateNotReady") {
-                console.warn("⚠️ StateNotReady hatası alındı, tekrar deneniyor...");
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                attempts--;
-            } else {
-                return { success: false, error: "API request failed" };
-            }
-        }
-    }
-    return { success: false, error: "StateNotReady retries exceeded, request failed." };
+    return false;
 }
 
-// Bot Tespit Endpointi
+// **📌 User-Agent ve IP tabanlı bot kontrolü**
+function isBot(req) {
+    const userAgent = req.headers["user-agent"] || "";
+    if (BOT_USER_AGENTS.some(bot => userAgent.includes(bot))) {
+        return true;
+    }
+    return false;
+}
+
+// **📌 Bot Tespit Endpointi**
 app.post("/botd-test", async (req, res) => {
     const { requestId, visitorId } = req.body;
     const clientIp = parseIp(req);
-    console.log("🔍 Yeni İstek Alındı! Request ID:", requestId, "Visitor ID:", visitorId || "Eksik!", "IP:", clientIp);
+    const userAgent = req.headers["user-agent"];
+
+    console.log("🔍 Yeni İstek Alındı! Request ID:", requestId, "Visitor ID:", visitorId || "Eksik!", "IP:", clientIp, "User-Agent:", userAgent);
+
+    // **📌 Eğer User-Agent bilinen botlardan biriyse, hemen engelle**
+    if (isBot(req)) {
+        console.warn("🚨 Bilinen Bot Tespit Edildi!", userAgent);
+        return res.status(403).json({ error: "Malicious bot detected (User-Agent)" });
+    }
+
+    // **📌 Eğer IP çok fazla istek yapıyorsa, rate limit uygula**
+    if (isRateLimited(clientIp)) {
+        console.warn("🚨 Şüpheli Aktivite: Çok fazla istek atan IP tespit edildi!", clientIp);
+        return res.status(403).json({ error: "Too many requests, potential bot activity." });
+    }
 
     if (!requestId) {
         console.warn("❌ Hata: Request ID eksik!");
@@ -87,10 +85,10 @@ app.post("/botd-test", async (req, res) => {
     }
 
     if (!visitorId) {
-        console.warn("⚠️ Uyarı: Visitor ID eksik! Devam ediliyor...");
+        console.warn("⚠️ Uyarı: Visitor ID eksik! Sunucu tarafında tespit yapılacak...");
     }
 
-    const fingerprintHash = hashFingerprint(visitorId, clientIp);
+    const fingerprintHash = hashFingerprint(visitorId, clientIp, userAgent);
 
     if (requestIdDatabase.has(fingerprintHash)) {
         console.warn("🚨 Daha önce bot olarak işaretlenen fingerprint tespit edildi!", fingerprintHash);
@@ -115,12 +113,12 @@ app.post("/botd-test", async (req, res) => {
     res.json({ status: "OK" });
 });
 
-// Ana Sayfa Endpointi
+// **📌 Ana Sayfa Endpointi**
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Sunucu Başlatma
+// **📌 Sunucu Başlatma**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
     console.log(`✅ BotD Test Sunucusu ${PORT} portunda çalışıyor.`);
