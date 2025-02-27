@@ -36,7 +36,6 @@ app.get("/", async (req, res) => {
         let isBot = false;
         let reason = "✅ Not a bot.";
 
-        // **User-Agent bazlı bot tespiti**
         if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
             isBot = true;
             reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
@@ -45,7 +44,6 @@ app.get("/", async (req, res) => {
 
         console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
-        // **HTML Sayfasını Server-Side Render Ederek Gönder**
         res.send(`
             <!DOCTYPE html>
             <html lang="en">
@@ -58,20 +56,18 @@ app.get("/", async (req, res) => {
                         background-color: yellow;
                         padding: 10px;
                         font-weight: bold;
-                        display: none;
+                        display: block;
                     }
                 </style>
             </head>
             <body>
                 <h1>Bot Detection Test</h1>
-                <p id="server-side-status"><strong>Server-Side Bot Detection:</strong> ${reason}</p>
-                <p id="request-id">Request ID: Waiting...</p>
-                <p id="visitor-id">Visitor ID: Waiting...</p>
-                <p id="botd-status">Detecting...</p>
+                <p><strong>IP:</strong> ${ip}</p>
+                <p><strong>User-Agent:</strong> ${userAgent}</p>
+                <p><strong>Server-Side Bot Detection:</strong> ${reason}</p>
 
                 <noscript>
                     <p id="noscript-warning">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
-                    <style>#noscript-warning { display: block; }</style>
                 </noscript>
 
                 <script>
@@ -88,12 +84,8 @@ app.get("/", async (req, res) => {
                             const requestId = result.requestId;
                             const visitorId = result.visitorId;
 
-                            document.getElementById("request-id").innerText = "Request ID: " + requestId;
-                            document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
-
                             console.log("📡 [BOTD] Sending Request ID to server:", requestId);
 
-                            // **BotD verisini sunucuya gönder**
                             fetch('/botd-test', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -102,15 +94,15 @@ app.get("/", async (req, res) => {
                             .then(response => response.json())
                             .then(data => {
                                 console.log("✅ [BOTD SUCCESS]:", data);
-                                document.getElementById("botd-status").innerText = "BotD Status: " + JSON.stringify(data, null, 2);
+                                document.body.innerHTML += '<p><strong>BotD Status:</strong> ' + JSON.stringify(data, null, 2) + '</p>';
                             })
                             .catch(error => {
                                 console.error("❌ [BOTD ERROR]:", error);
-                                document.getElementById("botd-status").innerText = "BotD Error: " + error.message;
+                                document.body.innerHTML += '<p><strong>BotD Error:</strong> ' + error.message + '</p>';
                             });
                         } catch (error) {
                             console.error("❌ [ERROR] FingerprintJS Error:", error);
-                            document.getElementById("botd-status").innerText = "FingerprintJS Error: " + error.message;
+                            document.body.innerHTML += '<p><strong>FingerprintJS Error:</strong> ' + error.message + '</p>';
                         }
                     });
                 </script>
@@ -119,32 +111,6 @@ app.get("/", async (req, res) => {
         `);
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
-        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
-    }
-});
-
-// **🛡️ Sunucu Tarafında Bot Tespiti (Artık JSON formatında çalışıyor!)**
-app.get("/server-side-bot-detection", (req, res) => {
-    try {
-        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
-        const userAgent = req.headers["user-agent"] || "Unknown";
-
-        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
-
-        let isBot = false;
-        let reason = "✅ Not a bot.";
-
-        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
-            isBot = true;
-            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
-            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
-        }
-
-        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
-        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
-
-    } catch (error) {
-        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
         res.status(500).json({ error: "Server error in bot detection!", details: error.message });
     }
 });
