@@ -46,13 +46,19 @@ app.get("/", async (req, res) => {
         console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
         // **index.html dosyasını oku ve içine tespit sonucunu ekle**
-        let html = fs.readFileSync(path.join(__dirname, "public", "index.html"), "utf8");
-        html = html.replace("{{SERVER_RESULT}}", reason);
+        fs.readFile(path.join(__dirname, "public", "index.html"), "utf8", (err, html) => {
+            if (err) {
+                console.error("❌ [ERROR] Could not read index.html:", err);
+                return res.status(500).send("Server error loading page.");
+            }
 
-        res.send(html);
+            html = html.replace("{{SERVER_RESULT}}", reason);
+            res.send(html);
+        });
+
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
-        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
+        res.status(500).send("Server error in bot detection!");
     }
 });
 
