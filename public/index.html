@@ -8,6 +8,7 @@
 <body>
     <h1>Bot Detection Test</h1>
     <p id="request-id">Request ID: Waiting...</p>
+    <p id="visitor-id">Visitor ID: Waiting...</p>
     <p id="status">Detecting...</p>
 
     <script>
@@ -27,14 +28,17 @@
             .then(result => {
                 console.log("✅ FingerprintJS Sonucu:", result);
                 const requestId = result.requestId;
-                document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                const visitorId = result.visitorId; // 👈 Visitor ID alındı
                 
+                document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                document.getElementById("visitor-id").innerText = "Visitor ID: " + (visitorId || "N/A");
+
                 return fetch('/botd-test', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ requestId })
+                    body: JSON.stringify({ requestId, visitorId }) // 👈 Visitor ID gönderiliyor
                 });
             })
             .then(response => {
