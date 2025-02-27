@@ -53,6 +53,14 @@ app.get("/", async (req, res) => {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Bot Detection Test</title>
+                <style>
+                    #noscript-warning {
+                        background-color: yellow;
+                        padding: 10px;
+                        font-weight: bold;
+                        display: none;
+                    }
+                </style>
             </head>
             <body>
                 <h1>Bot Detection Test</h1>
@@ -62,13 +70,15 @@ app.get("/", async (req, res) => {
                 <p id="botd-status">Detecting...</p>
 
                 <noscript>
-                    <p style="color: red;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+                    <p id="noscript-warning">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+                    <style>#noscript-warning { display: block; }</style>
                 </noscript>
 
                 <script>
                     document.addEventListener("DOMContentLoaded", async () => {
                         try {
-                            // **BotD FingerprintJS ile tespit**
+                            console.log("🔄 [INFO] Fetching BotD fingerprint...");
+
                             const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
                                 .then(FingerprintJS => FingerprintJS.load());
 
@@ -81,6 +91,8 @@ app.get("/", async (req, res) => {
                             document.getElementById("request-id").innerText = "Request ID: " + requestId;
                             document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
 
+                            console.log("📡 [BOTD] Sending Request ID to server:", requestId);
+
                             // **BotD verisini sunucuya gönder**
                             fetch('/botd-test', {
                                 method: 'POST',
@@ -89,12 +101,15 @@ app.get("/", async (req, res) => {
                             })
                             .then(response => response.json())
                             .then(data => {
+                                console.log("✅ [BOTD SUCCESS]:", data);
                                 document.getElementById("botd-status").innerText = "BotD Status: " + JSON.stringify(data, null, 2);
                             })
                             .catch(error => {
+                                console.error("❌ [BOTD ERROR]:", error);
                                 document.getElementById("botd-status").innerText = "BotD Error: " + error.message;
                             });
                         } catch (error) {
+                            console.error("❌ [ERROR] FingerprintJS Error:", error);
                             document.getElementById("botd-status").innerText = "FingerprintJS Error: " + error.message;
                         }
                     });
