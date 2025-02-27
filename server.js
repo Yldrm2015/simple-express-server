@@ -66,20 +66,37 @@ app.get("/", async (req, res) => {
                 </noscript>
 
                 <script>
-                    // **JS Açıkken BotD'yi Çalıştır**
-                    fetch('/botd-test', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ requestId: "waiting", visitorId: "waiting" })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById("request-id").innerText = "Request ID: " + data.requestId;
-                        document.getElementById("visitor-id").innerText = "Visitor ID: " + data.visitorId;
-                        document.getElementById("botd-status").innerText = "BotD Status: " + JSON.stringify(data, null, 2);
-                    })
-                    .catch(error => {
-                        document.getElementById("botd-status").innerText = "BotD Error: " + error.message;
+                    document.addEventListener("DOMContentLoaded", async () => {
+                        try {
+                            // **BotD FingerprintJS ile tespit**
+                            const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
+                                .then(FingerprintJS => FingerprintJS.load());
+
+                            const fp = await fpPromise;
+                            const result = await fp.get();
+
+                            const requestId = result.requestId;
+                            const visitorId = result.visitorId;
+
+                            document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                            document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
+
+                            // **BotD verisini sunucuya gönder**
+                            fetch('/botd-test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, visitorId })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                document.getElementById("botd-status").innerText = "BotD Status: " + JSON.stringify(data, null, 2);
+                            })
+                            .catch(error => {
+                                document.getElementById("botd-status").innerText = "BotD Error: " + error.message;
+                            });
+                        } catch (error) {
+                            document.getElementById("botd-status").innerText = "FingerprintJS Error: " + error.message;
+                        }
                     });
                 </script>
             </body>
@@ -87,32 +104,6 @@ app.get("/", async (req, res) => {
         `);
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
-        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
-    }
-});
-
-// **🛡️ Yeni `/server-side-bot-detection` Endpointi (JSON Formatında Çalışır)**
-app.get("/server-side-bot-detection", async (req, res) => {
-    try {
-        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
-        const userAgent = req.headers["user-agent"] || "Unknown";
-
-        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
-
-        let isBot = false;
-        let reason = "✅ Not a bot.";
-
-        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
-            isBot = true;
-            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
-            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
-        }
-
-        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
-        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
-
-    } catch (error) {
-        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
         res.status(500).json({ error: "Server error in bot detection!", details: error.message });
     }
 });
