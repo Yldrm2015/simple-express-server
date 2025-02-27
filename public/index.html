@@ -7,11 +7,32 @@
 </head>
 <body>
     <h1>Bot Detection Test</h1>
+
+    <!-- Request ID ve Visitor ID'nin JS ile gelmesi gerekiyor -->
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
+
+    <!-- SUNUCU TARAFINDAN BOT ALGILAMA MESAJI -->
+    <p id="server-side-status">Checking bot status on server...</p>
+
+    <!-- Tarayıcıdan gelen botd sonucu burada gösterilecek -->
     <p id="status">Detecting...</p>
 
     <script>
+        // İlk olarak **SUNUCU TARAFINDAN** bot tespiti yapalım!
+        fetch('/server-side-bot-detection')
+            .then(response => response.json())
+            .then(data => {
+                console.log("🔍 Sunucu Taraflı Tespit Sonucu:", data);
+                document.getElementById("server-side-status").innerText = 
+                    "Server-side detection: " + (data.error ? "⚠️ Bot Detected" : "✅ Not a bot");
+            })
+            .catch(error => {
+                console.error("❌ Sunucu Tarafından Bot Kontrolü Başarısız:", error);
+                document.getElementById("server-side-status").innerText = "⚠️ Server error in bot detection!";
+            });
+
+        // **Tarayıcı Taraflı (FingerprintJS) Bot Algılama**
         let FP_ERRORS = {};
         
         const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
@@ -28,17 +49,17 @@
             .then(result => {
                 console.log("✅ FingerprintJS Sonucu:", result);
                 const requestId = result.requestId;
-                const visitorId = result.visitorId; // 👈 Visitor ID alındı
-                
-                document.getElementById("request-id").innerText = "Request ID: " + requestId;
-                document.getElementById("visitor-id").innerText = "Visitor ID: " + (visitorId || "N/A");
+                const visitorId = result.visitorId;
 
+                document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
+                
                 return fetch('/botd-test', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ requestId, visitorId }) // 👈 Visitor ID gönderiliyor
+                    body: JSON.stringify({ requestId, visitorId })
                 });
             })
             .then(response => {
