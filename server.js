@@ -4,6 +4,7 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const NodeCache = require("node-cache");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -19,12 +20,38 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
-const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 10000; // Timeout süresini artırdık
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 10000;
 const ALLOWED_ORIGIN = "https://yourwebsite.com";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MIN_CONFIDENCE_SCORE = 0.6;
+const LOG_FILE_PATH = path.join(__dirname, "suspicious_bots.log");
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
+
+// ✅ HTTP Fingerprinting Middleware (Şüpheli botları tespit et)
+const requiredHeaders = [
+  "accept", "accept-encoding", "accept-language", "connection", "host", "user-agent"
+];
+
+function logSuspiciousBot(ip, reason) {
+  const logEntry = `[${new Date().toISOString()}] - Şüpheli Bot Tespit Edildi! IP: ${ip}, Sebep: ${reason}\n`;
+  fs.appendFileSync(LOG_FILE_PATH, logEntry);
+}
+
+function detectSuspiciousBot(req, res, next) {
+  const headers = Object.keys(req.headers);
+  const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+  const ip = parseIp(req);
+
+  if (missingHeaders.length > 1) {
+    logSuspiciousBot(ip, `Eksik Başlıklar: ${missingHeaders.join(", ")}`);
+    console.log(`🚨 Şüpheli bot tespit edildi! IP: ${ip} - Eksik Başlıklar: ${missingHeaders}`);
+  }
+
+  next();
+}
+
+app.use(detectSuspiciousBot);
 
 async function validateFingerprintResult(requestId, request) {
   console.log("🔍 Gelen Request ID:", requestId);
@@ -43,7 +70,7 @@ async function validateFingerprintResult(requestId, request) {
   while (attempts > 0) {
     try {
       console.log("🔄 API'ye istek gönderiliyor, deneme:", 4 - attempts);
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Bekleme süresi eklendi
+      await new Promise(resolve => setTimeout(resolve, 3000));
       const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
         headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
       });
