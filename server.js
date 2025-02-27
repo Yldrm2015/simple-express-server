@@ -4,7 +4,8 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const NodeCache = require("node-cache");
-const ja3 = require("ja3");
+const tls = require("tls");
+const crypto = require("crypto");
 
 dotenv.config();
 
@@ -27,28 +28,34 @@ const MIN_CONFIDENCE_SCORE = 0.6;
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
+function getJA3Hash(socket) {
+    if (!socket || !socket.getPeerCertificate) return null;
+    
+    const fingerprintData = [
+        socket.getProtocol(),
+        socket.getCipher().name,
+        socket.getPeerCertificate().fingerprint,
+    ].join(',');
+
+    return crypto.createHash('md5').update(fingerprintData).digest('hex');
+}
+
 app.use((req, res, next) => {
-  try {
-    const fingerprint = ja3.getJA3Hash(req);
+    const fingerprint = getJA3Hash(req.socket);
     console.log("🔍 JA3 Fingerprint:", fingerprint);
 
-    // Bilinen bot fingerprint'leri buraya eklenebilir
     const knownBotFingerprints = [
-      "d4e05f8ff88d63b3ff3c68b1d24f92bd",
-      "921f7b291ff8b1871f1ad88e78263546"
+        "d4e05f8ff88d63b3ff3c68b1d24f92bd",
+        "921f7b291ff8b1871f1ad88e78263546"
     ];
 
-    if (knownBotFingerprints.includes(fingerprint)) {
-      console.warn("🚨 Bot JA3 Fingerprint Tespit Edildi:", fingerprint);
-      return res.status(403).json({ error: "Malicious bot detected (JA3 Fingerprint)" });
+    if (fingerprint && knownBotFingerprints.includes(fingerprint)) {
+        console.warn("🚨 Bot JA3 Fingerprint Tespit Edildi:", fingerprint);
+        return res.status(403).json({ error: "Malicious bot detected (JA3 Fingerprint)" });
     }
 
     req.ja3Fingerprint = fingerprint;
     next();
-  } catch (err) {
-    console.error("❌ JA3 Fingerprint alma hatası:", err);
-    next();
-  }
 });
 
 async function validateFingerprintResult(requestId, request) {
