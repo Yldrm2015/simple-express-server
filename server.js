@@ -4,6 +4,7 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
 const requestIp = require("request-ip");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -44,80 +45,13 @@ app.get("/", async (req, res) => {
 
         console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
-        res.send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Bot Detection Test</title>
-            </head>
-            <body>
-                <h1>Bot Detection Test</h1>
-                <p><strong>Server-Side Detection:</strong> ${reason}</p>
-                <p id="server-side-status">Checking bot status on server...</p>
+        // **index.html dosyasını oku ve içine tespit sonucunu ekle**
+        let html = fs.readFileSync(path.join(__dirname, "public", "index.html"), "utf8");
+        html = html.replace("{{SERVER_RESULT}}", reason);
 
-                <noscript>
-                    <p style="color: yellow;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
-                </noscript>
-
-                <script>
-                    // **Tarayıcıdan Sunucuya `/server-side-bot-detection` API Çağrısı**
-                    fetch('/server-side-bot-detection')
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById("server-side-status").innerText = 
-                                data.error ? "⚠️ Bot Detected: " + data.reason : "✅ Not a bot";
-                        })
-                        .catch(error => {
-                            document.getElementById("server-side-status").innerText = "⚠️ Server error in bot detection!";
-                        });
-
-                    // **BotD FingerprintJS Tespiti**
-                    fetch('/botd-test', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ requestId: "waiting", visitorId: "waiting" })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        document.body.innerHTML += '<p><strong>BotD Status:</strong> ' + JSON.stringify(data, null, 2) + '</p>';
-                    })
-                    .catch(error => {
-                        document.body.innerHTML += '<p><strong>BotD Error:</strong> ' + error.message + '</p>';
-                    });
-                </script>
-            </body>
-            </html>
-        `);
+        res.send(html);
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
-        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
-    }
-});
-
-// **🛡️ Sunucu Tarafında Bot Tespiti (JSON Formatında Çalışır)**
-app.get("/server-side-bot-detection", (req, res) => {
-    try {
-        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
-        const userAgent = req.headers["user-agent"] || "Unknown";
-
-        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
-
-        let isBot = false;
-        let reason = "✅ Not a bot.";
-
-        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
-            isBot = true;
-            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
-            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
-        }
-
-        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
-        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
-
-    } catch (error) {
-        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
         res.status(500).json({ error: "Server error in bot detection!", details: error.message });
     }
 });
