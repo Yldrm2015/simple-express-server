@@ -123,6 +123,32 @@ app.get("/", async (req, res) => {
     }
 });
 
+// **🛡️ Sunucu Tarafında Bot Tespiti (Artık JSON formatında çalışıyor!)**
+app.get("/server-side-bot-detection", (req, res) => {
+    try {
+        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
+        const userAgent = req.headers["user-agent"] || "Unknown";
+
+        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
+
+        let isBot = false;
+        let reason = "✅ Not a bot.";
+
+        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
+            isBot = true;
+            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
+            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
+        }
+
+        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
+        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
+
+    } catch (error) {
+        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
+        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
+    }
+});
+
 // **🛡️ BotD API ile Tarayıcı Üzerinden Tespit (JS Açıkken Ekstra Kontrol)**
 app.post("/botd-test", async (req, res) => {
     try {
@@ -150,7 +176,6 @@ app.post("/botd-test", async (req, res) => {
     }
 });
 
-// **Sunucu Başlat**
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
