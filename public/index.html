@@ -8,7 +8,7 @@
 <body>
     <h1>Bot Detection Test</h1>
 
-    <p><strong>Sunucu Tespiti:</strong> Sunucu tarafından belirlenen sonuç burada olacak.</p>
+    <p><strong>Sunucu Tespiti:</strong> {{SERVER_RESULT}}</p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
     <p id="status">Detecting...</p>
@@ -18,45 +18,43 @@
     </noscript>
 
     <script>
-        // **🛡️ Tarayıcı Bot Algılama (FingerprintJS)**
-        let FP_ERRORS = {};
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                console.log("🔄 [INFO] Fetching BotD fingerprint...");
 
-        const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
-            .then(FingerprintJS => {
-                FP_ERRORS = {
-                    GENERAL_SERVER_FAILURE: FingerprintJS.ERROR_GENERAL_SERVER_FAILURE,
-                    CLIENT_TIMEOUT: FingerprintJS.ERROR_CLIENT_TIMEOUT
-                };
-                return FingerprintJS.load();
-            });
+                const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
+                    .then(FingerprintJS => FingerprintJS.load());
 
-        fpPromise
-            .then(fp => fp.get())
-            .then(result => {
-                console.log("✅ FingerprintJS Sonucu:", result);
+                const fp = await fpPromise;
+                const result = await fp.get();
+
                 const requestId = result.requestId;
                 const visitorId = result.visitorId;
 
                 document.getElementById("request-id").innerText = "Request ID: " + requestId;
                 document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
 
-                return fetch('/botd-test', {
+                console.log("📡 [BOTD] Sending Request ID to server:", requestId);
+
+                fetch('/botd-test', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requestId, visitorId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("✅ [BOTD SUCCESS]:", data);
+                    document.getElementById("status").innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error("❌ [BOTD ERROR]:", error);
+                    document.getElementById("status").innerText = "BotD Error: " + error.message;
                 });
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("📩 Sunucu Yanıt Verisi:", data);
-                document.getElementById("status").innerText = JSON.stringify(data, null, 2);
-            })
-            .catch(error => {
-                console.error("❌ Hata:", error);
-                document.getElementById("status").innerText = "Hata oluştu: " + error.message;
-            });
+            } catch (error) {
+                console.error("❌ [ERROR] FingerprintJS Error:", error);
+                document.getElementById("status").innerText = "FingerprintJS Error: " + error.message;
+            }
+        });
     </script>
 </body>
 </html>
