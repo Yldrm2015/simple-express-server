@@ -14,8 +14,7 @@
     "axios": "^1.4.0",
     "dotenv": "^16.0.3",
     "node-cache": "^5.1.2",
-    "@fingerprintjs/fingerprintjs-pro-server-api": "^2.0.0",
-    "ja3": "^1.0.0"
+    "@fingerprintjs/fingerprintjs-pro-server-api": "^2.0.0"
   },
   "engines": {
     "node": "18.x"
