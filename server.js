@@ -23,7 +23,7 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **🛡️ Sunucu Tarafında Bot Tespiti (JavaScript Kapalı Olsa Bile Çalışır)**
+// **🛡️ Sunucu Tarafından Bot Tespiti (JS Kapalıyken de Çalışır)**
 app.get("/", (req, res) => {
     try {
         const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
@@ -56,10 +56,15 @@ app.get("/", (req, res) => {
             </head>
             <body>
                 <h1>Bot Detection Test</h1>
-                <p><strong>IP:</strong> ${ip}</p>
-                <p><strong>User-Agent:</strong> ${userAgent}</p>
-                <p><strong>Server-Side Bot Detection:</strong> ${reason}</p>
-                
+                <p id="server-side-status"><strong>Server-Side Bot Detection:</strong> ${reason}</p>
+                <p id="request-id">Request ID: Waiting...</p>
+                <p id="visitor-id">Visitor ID: Waiting...</p>
+                <p id="botd-status">Detecting...</p>
+
+                <noscript>
+                    <p style="color: red;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+                </noscript>
+
                 <script>
                     // **JS Açıkken BotD'yi Çalıştır**
                     fetch('/botd-test', {
@@ -69,10 +74,12 @@ app.get("/", (req, res) => {
                     })
                     .then(response => response.json())
                     .then(data => {
-                        document.body.innerHTML += '<p><strong>BotD Status:</strong> ' + JSON.stringify(data, null, 2) + '</p>';
+                        document.getElementById("request-id").innerText = "Request ID: " + data.requestId;
+                        document.getElementById("visitor-id").innerText = "Visitor ID: " + data.visitorId;
+                        document.getElementById("botd-status").innerText = "BotD Status: " + JSON.stringify(data, null, 2);
                     })
                     .catch(error => {
-                        document.body.innerHTML += '<p><strong>BotD Error:</strong> ' + error.message + '</p>';
+                        document.getElementById("botd-status").innerText = "BotD Error: " + error.message;
                     });
                 </script>
             </body>
@@ -80,32 +87,6 @@ app.get("/", (req, res) => {
         `);
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
-        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
-    }
-});
-
-// **🛡️ ÖZEL ENDPOINT: Sunucu Tarafı Bot Tespiti (JavaScript KAPALI OLSA BİLE ÇALIŞIR)**
-app.get("/server-side-bot-detection", (req, res) => {
-    try {
-        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
-        const userAgent = req.headers["user-agent"] || "Unknown";
-
-        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
-
-        let isBot = false;
-        let reason = "✅ Not a bot.";
-
-        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
-            isBot = true;
-            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
-            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
-        }
-
-        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
-        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
-
-    } catch (error) {
-        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
         res.status(500).json({ error: "Server error in bot detection!", details: error.message });
     }
 });
