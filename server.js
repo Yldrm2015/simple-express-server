@@ -23,10 +23,10 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **🛡️ Sunucu Tarafından Bot Tespiti (JavaScript Kapalı Olsa Bile Çalışır)**
+// **🛡️ Sunucu Tarafında Bot Tespiti (JavaScript Kapalı Olsa Bile Çalışır)**
 app.get("/", (req, res) => {
     try {
-        const ip = requestIp.getClientIp(req);
+        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
         const userAgent = req.headers["user-agent"] || "Unknown";
 
         console.log("🔍 [SERVER-SIDE DETECTION] Request received:");
@@ -84,6 +84,32 @@ app.get("/", (req, res) => {
     }
 });
 
+// **🛡️ ÖZEL ENDPOINT: Sunucu Tarafı Bot Tespiti (JavaScript KAPALI OLSA BİLE ÇALIŞIR)**
+app.get("/server-side-bot-detection", (req, res) => {
+    try {
+        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
+        const userAgent = req.headers["user-agent"] || "Unknown";
+
+        console.log("🔍 [SERVER-SIDE BOT CHECK] IP:", ip, "User-Agent:", userAgent);
+
+        let isBot = false;
+        let reason = "✅ Not a bot.";
+
+        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
+            isBot = true;
+            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
+            console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
+        }
+
+        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
+        res.json({ status: isBot ? "❌ Bot Detected" : "✅ Not a bot", reason });
+
+    } catch (error) {
+        console.error("❌ [SERVER-SIDE DETECTION ERROR]:", error);
+        res.status(500).json({ error: "Server error in bot detection!", details: error.message });
+    }
+});
+
 // **🛡️ BotD API ile Tarayıcı Üzerinden Tespit (JS Açıkken Ekstra Kontrol)**
 app.post("/botd-test", async (req, res) => {
     try {
@@ -106,7 +132,6 @@ app.post("/botd-test", async (req, res) => {
         const identificationEvent = response.data;
         console.log("🔎 [BOTD API RESPONSE]:", JSON.stringify(identificationEvent, null, 2));
 
-        // **BotD tespiti yaptıysa bot olarak işaretle**
         if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
             console.warn("🚨 [BOTD ALERT]: Malicious bot detected!");
             return res.status(403).json({ error: "🚨 Malicious bot detected (BotD)." });
