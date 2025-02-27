@@ -10,122 +10,94 @@ dotenv.config();
 const parseIp = (req) => req.headers["x-forwarded-for"]?.split(",").shift() || req.socket.remoteAddress;
 
 const app = express();
-const requestCache = new NodeCache({ stdTTL: 60 }); // Davranışsal analiz için
-const knownBotIps = new Set(["45.83.64.1", "104.244.42.65"]); // Örnek bot IP'leri
-
+const requestIdDatabase = new NodeCache({ stdTTL: 300 }); // Cache to prevent replay attacks
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
+const ALLOWED_REQUEST_TIMESTAMP_DIFF_MS = 10000;
+const NODE_ENV = process.env.NODE_ENV || "development";
+const BOT_IP_LIST = new Set();
+const BOT_USER_AGENTS = [
+    "curl", "wget", "bot", "crawler", "spider", "httpclient",
+    "python-requests", "java", "scrapy", "selenium", "headless"
+];
 
-const PORT = process.env.PORT || 8080;
-console.log(`✅ Sunucu başlatıldı, Port: ${PORT}`);
+console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
-// 📌 **JS Açıkken FingerprintJS (BotD) Kullanarak Botları Tespit Et**
-async function validateFingerprintResult(requestId, request) {
-    console.log("🔍 Gelen Request ID:", requestId);
+// **🛡️ SUNUCU TARAFINDAN BOT ALGILAMA (JavaScript KAPALI OLSA BİLE ÇALIŞIR)**
+app.get("/server-side-bot-detection", (req, res) => {
+    const ip = parseIp(req);
+    const userAgent = req.headers["user-agent"] || "Unknown";
 
-    if (!FINGERPRINT_SECRET_KEY) {
-        console.error("❌ Hata: FingerprintJS API Key eksik!");
-        return { success: false, error: "FingerprintJS API Key missing!" };
+    console.log("🔍 Sunucuya gelen istek:", { ip, userAgent });
+
+    let isBot = false;
+    let reason = "Legitimate user.";
+
+    // **IP geçmişine göre bot tespiti**
+    if (BOT_IP_LIST.has(ip)) {
+        isBot = true;
+        reason = "Suspicious IP detected (Previously flagged as bot).";
+    }
+
+    // **User-Agent bazlı tespit**
+    if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
+        isBot = true;
+        reason = "Suspicious User-Agent detected.";
+    }
+
+    if (isBot) {
+        console.warn("🚨 BOT ALGILANDI:", { ip, userAgent, reason });
+        BOT_IP_LIST.add(ip);
+        return res.status(403).json({ error: "Bot detected.", reason });
+    }
+
+    console.log("✅ Kullanıcı meşru:", { ip, userAgent });
+    res.json({ status: "OK", reason });
+});
+
+// **🛡️ BOTD API ile Tarayıcı Üzerinden Tespit**
+app.post("/botd-test", async (req, res) => {
+    const { requestId, visitorId } = req.body;
+    const ip = parseIp(req);
+
+    console.log("🔍 Yeni İstek Alındı! Request ID:", requestId, "Visitor ID:", visitorId, "IP:", ip);
+
+    if (!requestId || !visitorId) {
+        console.warn("❌ Hata: Request ID veya Visitor ID eksik!");
+        return res.status(400).json({ error: "Request ID veya Visitor ID eksik!" });
     }
 
     try {
-        console.log("🔄 API'ye istek gönderiliyor...");
         const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
             headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
         });
 
         const identificationEvent = response.data;
         console.log("🔎 API Yanıtı Alındı:", identificationEvent);
-        const identification = identificationEvent.products?.identification?.data;
 
-        if (!identification) {
-            return { success: false, error: "Identification event not found, potential spoofing attack." };
+        // **BOTD'nin botları tespit edip etmediğini kontrol et**
+        if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
+            console.warn("🚨 Kötü Bot Tespit Edildi!");
+            return res.status(403).json({ error: "Malicious bot detected (BotD)." });
         }
 
-        return { success: true, identificationEvent };
+        return res.json({ status: "OK", requestId, visitorId });
     } catch (error) {
         console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
-        return { success: false, error: "API request failed" };
+        return res.status(500).json({ error: "BotD API request failed." });
     }
-}
-
-// 📌 **JS Kapalıyken Sunucu Tarafında Botları Tespit Et**
-async function detectBotByIpAndBehavior(req) {
-    const clientIp = parseIp(req);
-    const userAgent = req.headers["user-agent"] || "Unknown";
-
-    console.log("🔍 Gelen IP:", clientIp, "User-Agent:", userAgent);
-
-    // 📌 Bilinen bot IP'lerini kontrol et
-    if (knownBotIps.has(clientIp)) {
-        console.warn("🚨 Bot IP Kara Listeye Girdi:", clientIp);
-        return { success: false, error: "Bot detected based on IP." };
-    }
-
-    // 📌 Kullanıcı davranış analizi: Çok hızlı istek yapıyorsa bot olabilir
-    const requestCount = requestCache.get(clientIp) || 0;
-    requestCache.set(clientIp, requestCount + 1);
-
-    if (requestCount > 10) { // 10 isteği geçenler şüpheli
-        console.warn("🚨 Hızlı İstek Tespit Edildi! IP:", clientIp);
-        return { success: false, error: "Bot detected based on behavior." };
-    }
-
-    // 📌 User-Agent Analizi: Bot tarayıcılarını tespit et
-    const botUserAgents = ["Scrapy", "curl", "python-requests", "wget"];
-    if (botUserAgents.some(bot => userAgent.toLowerCase().includes(bot))) {
-        console.warn("🚨 Şüpheli User-Agent Tespit Edildi:", userAgent);
-        return { success: false, error: "Bot detected based on User-Agent." };
-    }
-
-    return { success: true };
-}
-
-// 📌 **Tarayıcı Açıkken BotD Kullanarak Kontrol Et**
-app.post("/botd-test", async (req, res) => {
-    const { requestId } = req.body;
-    console.log("🔍 Yeni İstek Alındı! Request ID:", requestId);
-
-    if (!requestId) {
-        console.warn("❌ Hata: Request ID eksik!");
-        return res.status(400).json({ error: "Request ID eksik! Lütfen client-side identification gerçekleştirin." });
-    }
-
-    const validationResult = await validateFingerprintResult(requestId, req);
-    console.log("🔎 Validation Sonucu:", validationResult);
-
-    if (!validationResult.success) {
-        console.warn("❌ Doğrulama Başarısız:", validationResult.error);
-        return res.status(403).json({ error: validationResult.error });
-    }
-
-    res.json({ status: "OK", message: "User is not a bot." });
 });
 
-// 📌 **JS Kapalıyken Sunucu Tarafında Bot Kontrolü**
-app.get("/server-side-bot-detection", async (req, res) => {
-    console.log("🔍 Sunucu Taraflı Bot Kontrolü Çalıştırılıyor...");
-    
-    const detectionResult = await detectBotByIpAndBehavior(req);
-
-    if (!detectionResult.success) {
-        console.warn("❌ Sunucu Taraflı Bot Tespit Edildi!", detectionResult.error);
-        return res.status(403).json({ error: detectionResult.error });
-    }
-
-    res.json({ status: "OK", message: "User is not a bot." });
-});
-
-// 📌 **Ana Sayfa Endpointi**
+// **🛡️ ANA SAYFA SERVİSİ**
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 📌 **Sunucu Dinleme**
+const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
-    console.log(`✅ Bot Tespit Sunucusu ${PORT} portunda çalışıyor.`);
+    console.log(`✅ Sunucu ${PORT} portunda çalışıyor.`);
 });
