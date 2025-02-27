@@ -27,12 +27,12 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Sunucu başlatıldı, ortam:", NODE_ENV);
 
-// **🛡️ SUNUCU TARAFINDAN BOT ALGILAMA (JavaScript KAPALI OLSA BİLE ÇALIŞIR)**
-app.get("/server-side-bot-detection", (req, res) => {
+// 🌟 **Global Middleware: Tüm İsteklerde Bot Tespiti Yap**
+app.use((req, res, next) => {
     const ip = parseIp(req);
     const userAgent = req.headers["user-agent"] || "Unknown";
 
-    console.log("🔍 Sunucuya gelen istek:", { ip, userAgent });
+    console.log("🔍 Yeni İstek:", { ip, userAgent });
 
     let isBot = false;
     let reason = "Legitimate user.";
@@ -49,17 +49,28 @@ app.get("/server-side-bot-detection", (req, res) => {
         reason = "Suspicious User-Agent detected.";
     }
 
+    // **Özel header'lar ile bot kontrolü (Gelişmiş tespit)**
+    const suspiciousHeaders = ["sec-fetch-mode", "sec-fetch-dest", "sec-fetch-site"];
+    if (!req.headers["accept-language"] || suspiciousHeaders.some(h => req.headers[h])) {
+        isBot = true;
+        reason = "Suspicious browser headers detected.";
+    }
+
     if (isBot) {
         console.warn("🚨 BOT ALGILANDI:", { ip, userAgent, reason });
-        BOT_IP_LIST.add(ip);
+        BOT_IP_LIST.add(ip); // Bot IP'yi kaydet
         return res.status(403).json({ error: "Bot detected.", reason });
     }
 
-    console.log("✅ Kullanıcı meşru:", { ip, userAgent });
-    res.json({ status: "OK", reason });
+    next();
 });
 
-// **🛡️ BOTD API ile Tarayıcı Üzerinden Tespit**
+// **🛡️ Sunucu Tarafından Bot Algılama (JS Kapalı Olsa Bile Çalışır)**
+app.get("/server-side-bot-detection", (req, res) => {
+    res.json({ status: "OK", message: "Sunucu tarafında tespit çalışıyor." });
+});
+
+// **🛡️ BotD API ile Tarayıcı Üzerinden Tespit (JS Açıkken Ekstra Kontrol)**
 app.post("/botd-test", async (req, res) => {
     const { requestId, visitorId } = req.body;
     const ip = parseIp(req);
@@ -92,12 +103,12 @@ app.post("/botd-test", async (req, res) => {
     }
 });
 
-// **🛡️ ANA SAYFA SERVİSİ**
+// **🛡️ Ana Sayfa Servisi**
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = process.env.PORT || 6069;
 app.listen(PORT, () => {
-    console.log(`✅ Sunucu ${PORT} portunda çalışıyor.`);
+    console.log(`✅ Sunucu ${PORT} portunda çalışıyor...`);
 });
