@@ -116,16 +116,8 @@ app.get("/", async (req, res) => {
                                     reason = "🚨 BOT DETECTED: console.debug blocked!";
                                 }
 
-                                // **Mouse hareketi tespiti**
-                                let movementDetected = false;
-                                document.addEventListener("mousemove", () => movementDetected = true);
-                                setTimeout(() => {
-                                    if (!movementDetected) {
-                                        isHeadless = true;
-                                        reason = "🚨 BOT DETECTED: No mouse movement!";
-                                    }
-                                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + reason;
-                                }, 1000);
+                                // **Final Sonucu Yazdır**
+                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + reason;
 
                             } catch (error) {
                                 document.getElementById("js-detection").innerText = "⚠️ Error in detection: " + error.message;
