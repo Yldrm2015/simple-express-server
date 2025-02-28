@@ -19,83 +19,87 @@ const BOT_USER_AGENTS = [
     "python-requests", "java", "scrapy", "selenium", "headless"
 ];
 
-// Fake veya Proxy IP'leri kara listeye alalım
-const BLOCKED_IPS = new Set([
-    "192.168.1.100",   // Fake test IP
-    "127.0.0.1",       // Localhost
-    "88.248.190.36",   // Test amaçlı bir IP
-]);
-
 console.log("✅ Server started in", NODE_ENV, "mode");
 
 // **🛡️ Sunucu Tarafından Bot Tespiti**
 app.get("/", async (req, res) => {
-    const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
-    const userAgent = req.headers["user-agent"] || "Unknown";
-
-    console.log("🔍 [SERVER-SIDE DETECTION] Request received:");
-    console.log("   - IP:", ip);
-    console.log("   - User-Agent:", userAgent);
-
-    let isBot = false;
-    let reason = "✅ Not a bot.";
-
-    // **IP Kara Liste Kontrolü**
-    if (BLOCKED_IPS.has(ip)) {
-        isBot = true;
-        reason = "🚨 BOT DETECTED: Blacklisted IP!";
-    }
-
-    // **User-Agent bazlı bot tespiti**
-    if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
-        isBot = true;
-        reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
-    }
-
-    // **Şüpheli IP için BotD API'yi Kullan**
-    let botdDetection = "Unknown";
     try {
-        const response = await axios.get(`https://ipinfo.io/${ip}/json`);
-        if (response.data.org && response.data.org.includes("Hosting")) {
+        const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
+        const userAgent = req.headers["user-agent"] || "Unknown";
+
+        console.log("🔍 [SERVER-SIDE DETECTION] Request received:");
+        console.log("   - IP:", ip);
+        console.log("   - User-Agent:", userAgent);
+
+        let isBot = false;
+        let reason = "✅ Not a bot.";
+
+        // **User-Agent bazlı bot tespiti**
+        if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
             isBot = true;
-            botdDetection = "🚨 BOT DETECTED: Data Center / VPN!";
+            reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
         }
+
+        console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
+
+        // **HTML Yanıtı**
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Bot Detection Test</title>
+            </head>
+            <body>
+                <h1>Bot Detection Test</h1>
+
+                <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
+                <p id="js-detection">JavaScript Detection: Checking...</p>
+
+                <script>
+                    function detectHeadless() {
+                        try {
+                            let isHeadless = false;
+
+                            // **navigator.webdriver ile botları yakala**
+                            if (navigator.webdriver) {
+                                isHeadless = true;
+                            }
+
+                            // **Dil kontrolü (Bazı headless tarayıcılar boş döner)**
+                            if (!navigator.languages || navigator.languages.length === 0) {
+                                isHeadless = true;
+                            }
+
+                            // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
+                            const canvas = document.createElement("canvas");
+                            const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                            if (!gl) {
+                                isHeadless = true;
+                            }
+
+                            // **window.chrome kontrolü (Headless Chrome genellikle bunu eksik bırakır)**
+                            if (!window.chrome) {
+                                isHeadless = true;
+                            }
+
+                            return isHeadless ? "🚨 BOT DETECTED: Headless Chrome!" : "✅ Not a bot.";
+                        } catch (error) {
+                            return "⚠️ Error in detection: " + error.message;
+                        }
+                    }
+
+                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + detectHeadless();
+                </script>
+            </body>
+            </html>
+        `);
+
     } catch (error) {
-        console.warn("⚠️ IP Kontrolü yapılamadı:", error.message);
+        console.error("❌ [SERVER-SIDE ERROR]:", error);
+        res.status(500).send("Server error in bot detection!");
     }
-
-    if (isBot) {
-        console.warn("🚨 BOT ALGILANDI:", { ip, userAgent, reason, botdDetection });
-    }
-
-    console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
-
-    // **HTML Yanıtı (Headless Tarayıcıyı Tespit Etmek İçin JavaScript İçerir)**
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bot Detection Test</title>
-        </head>
-        <body>
-            <h1>Bot Detection Test</h1>
-
-            <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
-            <p id="js-detection">JavaScript Detection: Waiting...</p>
-
-            <script>
-                function detectHeadless() {
-                    const isHeadless = navigator.webdriver || !navigator.languages || !window.chrome;
-                    return isHeadless ? "🚨 BOT DETECTED: Headless Chrome!" : "✅ Not a bot.";
-                }
-
-                document.getElementById("js-detection").innerText = "JavaScript Detection: " + detectHeadless();
-            </script>
-        </body>
-        </html>
-    `);
 });
 
 // **BotD API ile Tarayıcı Üzerinden Tespit**
