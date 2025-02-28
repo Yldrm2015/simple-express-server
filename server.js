@@ -33,7 +33,7 @@ app.get("/", async (req, res) => {
     console.log("   - WebDriver Detected:", webdriver);
 
     let isBot = false;
-    let reason = "✅ Not a bot.";
+    let reason = "⚠️ JavaScript is disabled";
 
     // **User-Agent bazlı bot tespiti**
     if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
