@@ -63,70 +63,46 @@ app.get("/", async (req, res) => {
                 </noscript>
 
                 <script>
-                    setTimeout(() => {
-                        function detectHeadless() {
-                            try {
-                                let isHeadless = false;
-                                let reason = "✅ Not a bot.";
+                    document.addEventListener("DOMContentLoaded", async () => {
+                        try {
+                            console.log("🔄 [INFO] Fetching BotD fingerprint...");
 
-                                // **navigator.webdriver ile botları yakala**
-                                if (navigator.webdriver) {
-                                    isHeadless = true;
-                                    reason = "🚨 BOT DETECTED: Webdriver active!";
-                                }
+                            const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
+                                .then(FingerprintJS => FingerprintJS.load());
 
-                                // **navigator.plugins (Eklenti yoksa bot olabilir)**
-                                if (navigator.plugins.length === 0) {
-                                    isHeadless = true;
-                                    reason = "🚨 BOT DETECTED: No browser plugins found!";
-                                }
+                            const fp = await fpPromise;
+                            const result = await fp.get();
 
-                                // **navigator.languages (Dil listesi boşsa bot olabilir)**
-                                if (!navigator.languages || navigator.languages.length === 0) {
-                                    isHeadless = true;
-                                    reason = "🚨 BOT DETECTED: No browser languages found!";
-                                }
+                            const requestId = result.requestId;
+                            const visitorId = result.visitorId;
 
-                                // **navigator.permissions (Headless tarayıcı burada hata verir)**
-                                navigator.permissions.query({ name: 'notifications' })
-                                    .then(permissionStatus => {
-                                        if (permissionStatus.state === 'denied') {
-                                            isHeadless = true;
-                                            reason = "🚨 BOT DETECTED: Notification permission blocked!";
-                                        }
-                                    }).catch(() => {
-                                        isHeadless = true;
-                                        reason = "🚨 BOT DETECTED: Notifications API error!";
-                                    });
+                            document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                            document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
 
-                                // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
-                                const canvas = document.createElement("canvas");
-                                const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-                                if (!gl) {
-                                    isHeadless = true;
-                                    reason = "🚨 BOT DETECTED: WebGL not available!";
-                                }
+                            console.log("📡 [BOTD] Sending Request ID to server:", requestId);
 
-                                // **console.debug() (Headless Chrome'da undefined döner)**
-                                let debugCheck = false;
-                                console.debug = function () { debugCheck = true; };
-                                console.debug();
-                                if (!debugCheck) {
-                                    isHeadless = true;
-                                    reason = "🚨 BOT DETECTED: console.debug blocked!";
-                                }
+                            fetch('/botd-test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, visitorId })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("✅ [BOTD SUCCESS]:", data);
+                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + JSON.stringify(data, null, 2);
+                            })
+                            .catch(error => {
+                                console.error("❌ [BOTD ERROR]:", error);
+                                document.getElementById("js-detection").innerText = "BotD Error: " + error.message;
+                            });
 
-                                // **Final Sonucu Yazdır**
-                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + reason;
-
-                            } catch (error) {
-                                document.getElementById("js-detection").innerText = "⚠️ Error in detection: " + error.message;
-                            }
+                        } catch (error) {
+                            console.error("❌ [ERROR] FingerprintJS Error:", error);
+                            document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
                         }
-
-                        detectHeadless();
-                    }, 500);
+                    });
                 </script>
+
             </body>
             </html>
         `);
@@ -134,6 +110,42 @@ app.get("/", async (req, res) => {
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
         res.status(500).send("Server error in bot detection!");
+    }
+});
+
+// **🛡️ BotD API ile Tarayıcı Üzerinden Tespit**
+app.post("/botd-test", async (req, res) => {
+    try {
+        const { requestId, visitorId } = req.body;
+
+        console.log("🔍 [BOTD DETECTION] Request received:");
+        console.log("   - Request ID:", requestId);
+        console.log("   - Visitor ID:", visitorId);
+
+        if (!requestId || !visitorId) {
+            console.warn("❌ [BOTD DETECTION ERROR]: Missing Request ID or Visitor ID!");
+            return res.status(400).json({ error: "Request ID veya Visitor ID eksik!" });
+        }
+
+        console.log("📡 [BOTD API CALL] Fetching data from BotD API...");
+        const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
+            headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
+        });
+
+        const identificationEvent = response.data;
+        console.log("🔎 [BOTD API RESPONSE]:", JSON.stringify(identificationEvent, null, 2));
+
+        if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
+            console.warn("🚨 [BOTD ALERT]: Malicious bot detected!");
+            return res.status(403).json({ error: "🚨 Malicious bot detected (BotD)." });
+        }
+
+        console.log("✅ [BOTD RESULT]: Not a bot.");
+        return res.json({ status: "✅ Not a bot (BotD OK)", requestId, visitorId });
+
+    } catch (error) {
+        console.error("❌ [BOTD API ERROR]:", error.response ? error.response.data : error.message);
+        return res.status(500).json({ error: "BotD API request failed." });
     }
 });
 
