@@ -73,6 +73,24 @@ app.get("/", async (req, res) => {
                                     isHeadless = true;
                                 }
 
+                                // **navigator.permissions (Headless tarayıcılar burada hata verir)**
+                                navigator.permissions.query({ name: 'notifications' })
+                                    .then(permissionStatus => {
+                                        if (permissionStatus.state === 'denied') {
+                                            isHeadless = true;
+                                        }
+                                    }).catch(() => {
+                                        isHeadless = true;
+                                    });
+
+                                // **console.debug() ile başlatılmış mı kontrol et (Headless Chrome'da undefined döner)**
+                                let debugCheck = false;
+                                console.debug = function () { debugCheck = true; };
+                                console.debug();
+                                if (!debugCheck) {
+                                    isHeadless = true;
+                                }
+
                                 // **Dil kontrolü (Headless tarayıcılar boş dönebilir)**
                                 if (!navigator.languages || navigator.languages.length === 0) {
                                     isHeadless = true;
@@ -85,17 +103,12 @@ app.get("/", async (req, res) => {
                                     isHeadless = true;
                                 }
 
-                                // **window.chrome kontrolü (Headless Chrome genellikle bunu eksik bırakır)**
-                                if (!window.chrome) {
-                                    isHeadless = true;
-                                }
-
                                 // **User-Agent uzunluğu düşükse (Headless tarayıcılarda bazen kısa olur)**
                                 if (navigator.userAgent.length < 100) {
                                     isHeadless = true;
                                 }
 
-                                // **Kapsamlı Mouse hareketi kontrolü (Headless botlar mouse hareketi algılamaz)**
+                                // **Mouse hareketi tespiti**
                                 let movementDetected = false;
                                 document.addEventListener("mousemove", () => movementDetected = true);
                                 setTimeout(() => {
