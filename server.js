@@ -67,45 +67,53 @@ app.get("/", async (req, res) => {
                         function detectHeadless() {
                             try {
                                 let isHeadless = false;
+                                let reason = "✅ Not a bot.";
 
                                 // **navigator.webdriver ile botları yakala**
                                 if (navigator.webdriver) {
                                     isHeadless = true;
+                                    reason = "🚨 BOT DETECTED: Webdriver active!";
                                 }
 
-                                // **navigator.permissions (Headless tarayıcılar burada hata verir)**
+                                // **navigator.plugins (Eklenti yoksa bot olabilir)**
+                                if (navigator.plugins.length === 0) {
+                                    isHeadless = true;
+                                    reason = "🚨 BOT DETECTED: No browser plugins found!";
+                                }
+
+                                // **navigator.languages (Dil listesi boşsa bot olabilir)**
+                                if (!navigator.languages || navigator.languages.length === 0) {
+                                    isHeadless = true;
+                                    reason = "🚨 BOT DETECTED: No browser languages found!";
+                                }
+
+                                // **navigator.permissions (Headless tarayıcı burada hata verir)**
                                 navigator.permissions.query({ name: 'notifications' })
                                     .then(permissionStatus => {
                                         if (permissionStatus.state === 'denied') {
                                             isHeadless = true;
+                                            reason = "🚨 BOT DETECTED: Notification permission blocked!";
                                         }
                                     }).catch(() => {
                                         isHeadless = true;
+                                        reason = "🚨 BOT DETECTED: Notifications API error!";
                                     });
-
-                                // **console.debug() ile başlatılmış mı kontrol et (Headless Chrome'da undefined döner)**
-                                let debugCheck = false;
-                                console.debug = function () { debugCheck = true; };
-                                console.debug();
-                                if (!debugCheck) {
-                                    isHeadless = true;
-                                }
-
-                                // **Dil kontrolü (Headless tarayıcılar boş dönebilir)**
-                                if (!navigator.languages || navigator.languages.length === 0) {
-                                    isHeadless = true;
-                                }
 
                                 // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
                                 const canvas = document.createElement("canvas");
                                 const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
                                 if (!gl) {
                                     isHeadless = true;
+                                    reason = "🚨 BOT DETECTED: WebGL not available!";
                                 }
 
-                                // **User-Agent uzunluğu düşükse (Headless tarayıcılarda bazen kısa olur)**
-                                if (navigator.userAgent.length < 100) {
+                                // **console.debug() (Headless Chrome'da undefined döner)**
+                                let debugCheck = false;
+                                console.debug = function () { debugCheck = true; };
+                                console.debug();
+                                if (!debugCheck) {
                                     isHeadless = true;
+                                    reason = "🚨 BOT DETECTED: console.debug blocked!";
                                 }
 
                                 // **Mouse hareketi tespiti**
@@ -114,18 +122,13 @@ app.get("/", async (req, res) => {
                                 setTimeout(() => {
                                     if (!movementDetected) {
                                         isHeadless = true;
+                                        reason = "🚨 BOT DETECTED: No mouse movement!";
                                     }
+                                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + reason;
                                 }, 1000);
 
-                                const resultText = isHeadless 
-                                    ? "🚨 BOT DETECTED: Headless Chrome!" 
-                                    : "✅ Not a bot.";
-                                
-                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + resultText;
-
-                                return resultText;
                             } catch (error) {
-                                return "⚠️ Error in detection: " + error.message;
+                                document.getElementById("js-detection").innerText = "⚠️ Error in detection: " + error.message;
                             }
                         }
 
@@ -139,42 +142,6 @@ app.get("/", async (req, res) => {
     } catch (error) {
         console.error("❌ [SERVER-SIDE ERROR]:", error);
         res.status(500).send("Server error in bot detection!");
-    }
-});
-
-// **BotD API ile Tarayıcı Üzerinden Tespit**
-app.post("/botd-test", async (req, res) => {
-    try {
-        const { requestId, visitorId } = req.body;
-
-        console.log("🔍 [BOTD DETECTION] Request received:");
-        console.log("   - Request ID:", requestId);
-        console.log("   - Visitor ID:", visitorId);
-
-        if (!requestId || !visitorId) {
-            console.warn("❌ [BOTD DETECTION ERROR]: Missing Request ID or Visitor ID!");
-            return res.status(400).json({ error: "Request ID veya Visitor ID eksik!" });
-        }
-
-        console.log("📡 [BOTD API CALL] Fetching data from BotD API...");
-        const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
-            headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
-        });
-
-        const identificationEvent = response.data;
-        console.log("🔎 [BOTD API RESPONSE]:", JSON.stringify(identificationEvent, null, 2));
-
-        if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
-            console.warn("🚨 [BOTD ALERT]: Malicious bot detected!");
-            return res.status(403).json({ error: "🚨 Malicious bot detected (BotD)." });
-        }
-
-        console.log("✅ [BOTD RESULT]: Not a bot.");
-        return res.json({ status: "✅ Not a bot (BotD OK)", requestId, visitorId });
-
-    } catch (error) {
-        console.error("❌ [BOTD API ERROR]:", error.response ? error.response.data : error.message);
-        return res.status(500).json({ error: "BotD API request failed." });
     }
 });
 
