@@ -54,6 +54,8 @@ app.get("/", async (req, res) => {
                 <h1>Bot Detection Test</h1>
 
                 <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
+                <p id="request-id">Request ID: Waiting...</p>
+                <p id="visitor-id">Visitor ID: Waiting...</p>
                 <p id="js-detection">JavaScript Detection: Checking...</p>
 
                 <noscript>
@@ -61,47 +63,43 @@ app.get("/", async (req, res) => {
                 </noscript>
 
                 <script>
-                    setTimeout(() => {
-                        function detectHeadless() {
-                            try {
-                                let isHeadless = false;
+                    document.addEventListener("DOMContentLoaded", async () => {
+                        try {
+                            console.log("🔄 [INFO] Fetching BotD fingerprint...");
 
-                                if (navigator.webdriver) {
-                                    isHeadless = true;
-                                }
+                            const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
+                                .then(FingerprintJS => FingerprintJS.load());
 
-                                if (!navigator.languages || navigator.languages.length === 0) {
-                                    isHeadless = true;
-                                }
+                            const fp = await fpPromise;
+                            const result = await fp.get();
 
-                                const canvas = document.createElement("canvas");
-                                const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-                                if (!gl) {
-                                    isHeadless = true;
-                                }
+                            const requestId = result.requestId;
+                            const visitorId = result.visitorId;
 
-                                if (!window.chrome) {
-                                    isHeadless = true;
-                                }
+                            document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                            document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
 
-                                if (navigator.userAgent.length < 100) {
-                                    isHeadless = true;
-                                }
+                            console.log("📡 [BOTD] Sending Request ID to server:", requestId);
 
-                                const resultText = isHeadless 
-                                    ? "🚨 BOT DETECTED: Headless Chrome!" 
-                                    : "✅ Not a bot.";
-                                
-                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + resultText;
-
-                                return resultText;
-                            } catch (error) {
-                                return "⚠️ Error in detection: " + error.message;
-                            }
+                            fetch('/botd-test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, visitorId })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("✅ [BOTD SUCCESS]:", data);
+                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + JSON.stringify(data, null, 2);
+                            })
+                            .catch(error => {
+                                console.error("❌ [BOTD ERROR]:", error);
+                                document.getElementById("js-detection").innerText = "BotD Error: " + error.message;
+                            });
+                        } catch (error) {
+                            console.error("❌ [ERROR] FingerprintJS Error:", error);
+                            document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
                         }
-
-                        detectHeadless();
-                    }, 500);
+                    });
                 </script>
             </body>
             </html>
