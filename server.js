@@ -34,7 +34,6 @@ app.get("/", async (req, res) => {
         let isBot = false;
         let reason = "✅ Not a bot.";
 
-        // **User-Agent bazlı bot tespiti**
         if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
             isBot = true;
             reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
@@ -57,46 +56,51 @@ app.get("/", async (req, res) => {
                 <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
                 <p id="js-detection">JavaScript Detection: Checking...</p>
 
+                <noscript>
+                    <p style="color: yellow; font-weight: bold;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
+                </noscript>
+
                 <script>
                     setTimeout(() => {
                         function detectHeadless() {
                             try {
                                 let isHeadless = false;
 
-                                // **navigator.webdriver ile botları yakala**
                                 if (navigator.webdriver) {
                                     isHeadless = true;
                                 }
 
-                                // **Dil kontrolü (Bazı headless tarayıcılar boş döner)**
                                 if (!navigator.languages || navigator.languages.length === 0) {
                                     isHeadless = true;
                                 }
 
-                                // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
                                 const canvas = document.createElement("canvas");
                                 const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
                                 if (!gl) {
                                     isHeadless = true;
                                 }
 
-                                // **window.chrome kontrolü (Headless Chrome genellikle bunu eksik bırakır)**
                                 if (!window.chrome) {
                                     isHeadless = true;
                                 }
 
-                                // **User-Agent uzunluğu düşükse (Headless tarayıcılarda bazen kısa olur)**
                                 if (navigator.userAgent.length < 100) {
                                     isHeadless = true;
                                 }
 
-                                return isHeadless ? "🚨 BOT DETECTED: Headless Chrome!" : "✅ Not a bot.";
+                                const resultText = isHeadless 
+                                    ? "🚨 BOT DETECTED: Headless Chrome!" 
+                                    : "✅ Not a bot.";
+                                
+                                document.getElementById("js-detection").innerText = "JavaScript Detection: " + resultText;
+
+                                return resultText;
                             } catch (error) {
                                 return "⚠️ Error in detection: " + error.message;
                             }
                         }
 
-                        document.getElementById("js-detection").innerText = "JavaScript Detection: " + detectHeadless();
+                        detectHeadless();
                     }, 500);
                 </script>
             </body>
