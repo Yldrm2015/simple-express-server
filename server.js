@@ -58,39 +58,46 @@ app.get("/", async (req, res) => {
                 <p id="js-detection">JavaScript Detection: Checking...</p>
 
                 <script>
-                    function detectHeadless() {
-                        try {
-                            let isHeadless = false;
+                    setTimeout(() => {
+                        function detectHeadless() {
+                            try {
+                                let isHeadless = false;
 
-                            // **navigator.webdriver ile botları yakala**
-                            if (navigator.webdriver) {
-                                isHeadless = true;
+                                // **navigator.webdriver ile botları yakala**
+                                if (navigator.webdriver) {
+                                    isHeadless = true;
+                                }
+
+                                // **Dil kontrolü (Bazı headless tarayıcılar boş döner)**
+                                if (!navigator.languages || navigator.languages.length === 0) {
+                                    isHeadless = true;
+                                }
+
+                                // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
+                                const canvas = document.createElement("canvas");
+                                const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                                if (!gl) {
+                                    isHeadless = true;
+                                }
+
+                                // **window.chrome kontrolü (Headless Chrome genellikle bunu eksik bırakır)**
+                                if (!window.chrome) {
+                                    isHeadless = true;
+                                }
+
+                                // **User-Agent uzunluğu düşükse (Headless tarayıcılarda bazen kısa olur)**
+                                if (navigator.userAgent.length < 100) {
+                                    isHeadless = true;
+                                }
+
+                                return isHeadless ? "🚨 BOT DETECTED: Headless Chrome!" : "✅ Not a bot.";
+                            } catch (error) {
+                                return "⚠️ Error in detection: " + error.message;
                             }
-
-                            // **Dil kontrolü (Bazı headless tarayıcılar boş döner)**
-                            if (!navigator.languages || navigator.languages.length === 0) {
-                                isHeadless = true;
-                            }
-
-                            // **WebGL tespiti (Headless tarayıcılar genelde bozuk değer döndürür)**
-                            const canvas = document.createElement("canvas");
-                            const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-                            if (!gl) {
-                                isHeadless = true;
-                            }
-
-                            // **window.chrome kontrolü (Headless Chrome genellikle bunu eksik bırakır)**
-                            if (!window.chrome) {
-                                isHeadless = true;
-                            }
-
-                            return isHeadless ? "🚨 BOT DETECTED: Headless Chrome!" : "✅ Not a bot.";
-                        } catch (error) {
-                            return "⚠️ Error in detection: " + error.message;
                         }
-                    }
 
-                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + detectHeadless();
+                        document.getElementById("js-detection").innerText = "JavaScript Detection: " + detectHeadless();
+                    }, 500);
                 </script>
             </body>
             </html>
