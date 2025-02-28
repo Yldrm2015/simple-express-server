@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
-const path = require("path");
 const requestIp = require("request-ip");
 
 dotenv.config();
@@ -10,7 +9,6 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
 const FINGERPRINT_SECRET_KEY = process.env.FINGERPRINT_SECRET_KEY;
 const API_ENDPOINT = "https://eu.api.fpjs.io/events/";
@@ -23,7 +21,7 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **🛡️ Sunucu Tarafında Bot Tespiti (JS Kapalıyken de Çalışır)**
+// **🛡️ Sunucu Tarafından Bot Tespiti (JS Kapalıyken de Çalışır)**
 app.get("/", async (req, res) => {
     try {
         const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
@@ -70,7 +68,7 @@ app.get("/", async (req, res) => {
                         try {
                             console.log("🔄 [INFO] Fetching BotD fingerprint...");
 
-                            const fpPromise = import('https://fpjscdn.net/v3/YOUR_PUBLIC_API_KEY')
+                            const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
                                 .then(FingerprintJS => FingerprintJS.load());
 
                             const fp = await fpPromise;
