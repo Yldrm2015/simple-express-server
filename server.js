@@ -93,8 +93,6 @@ app.get("/", async (req, res) => {
                 <img src="/images/${browserInfo.icon}" alt="${browserInfo.name}" width="32px">
                 ${browserInfo.name}
             </p>
-            <p id="request-id">Request ID: Waiting...</p>
-            <p id="visitor-id">Visitor ID: Waiting...</p>
             <p id="js-detection">JavaScript Detection: Checking...</p>
 
             <noscript>
@@ -112,18 +110,12 @@ app.get("/", async (req, res) => {
                         const fp = await fpPromise;
                         const result = await fp.get();
 
-                        const requestId = result.requestId;
-                        const visitorId = result.visitorId;
-
-                        document.getElementById("request-id").innerText = "Request ID: " + requestId;
-                        document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
-
-                        console.log("📡 [BOTD] Sending Request ID to server:", requestId);
+                        console.log("📡 [BOTD] Sending Request ID to server:", result.requestId);
 
                         fetch('/botd-test', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ requestId, visitorId })
+                            body: JSON.stringify({ requestId: result.requestId, visitorId: result.visitorId })
                         })
                         .then(response => response.json())
                         .then(data => {
@@ -165,7 +157,7 @@ app.post("/botd-test", async (req, res) => {
             return res.status(403).json({ error: "🚨 Malicious bot detected (BotD)." });
         }
 
-        return res.json({ status: "✅ Not a bot (BotD OK)", requestId, visitorId });
+        return res.json({ status: "✅ Not a bot (BotD OK)" });
 
     } catch (error) {
         console.error("❌ [BOTD API ERROR]:", error.response ? error.response.data : error.message);
