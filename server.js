@@ -64,6 +64,7 @@ app.get("/", async (req, res) => {
             <h1>Bot Detection Test</h1>
 
             <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
+            <p id="browser-info"><strong>Browser Info:</strong> Detecting...</p>
             <p id="request-id">Request ID: Waiting...</p>
             <p id="visitor-id">Visitor ID: Waiting...</p>
             <p id="js-detection">JavaScript Detection: Checking...</p>
@@ -75,6 +76,10 @@ app.get("/", async (req, res) => {
             <script>
                 document.addEventListener("DOMContentLoaded", async () => {
                     try {
+                        // 🌍 Tarayıcı Bilgisini Al ve Ekrana Yazdır
+                        const browserInfo = navigator.userAgent;
+                        document.getElementById("browser-info").innerText = "Browser Info: " + browserInfo;
+
                         console.log("🔄 [INFO] Fetching BotD fingerprint...");
 
                         const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
