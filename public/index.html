@@ -24,8 +24,13 @@
             let browserName = "Unknown";
             let browserIcon = "❓";
 
-            // **🦁 Brave Tespiti (Brave kendini Chrome gibi gösteriyor, özel kontrol gerekli)**
-            if (navigator.brave && await navigator.brave.isBrave()) {
+            // **🦁 Brave Tespiti (Kesin Çözüm!)**
+            let isBrave = false;
+            if (navigator.brave !== undefined) {
+                isBrave = await navigator.brave.isBrave();
+            }
+
+            if (isBrave) {
                 browserName = "Brave";
                 browserIcon = "🦁";
             } else if (userAgent.includes("Edg")) {
@@ -45,7 +50,7 @@
                 browserIcon = "🌍";
             }
 
-            // **Browser bilgisini ekrana yazdır**
+            // **Tarayıcı bilgisini ekrana yazdır**
             document.getElementById("browser-info").innerHTML = `<strong>Browser Info:</strong> ${browserIcon} ${browserName}`;
         }
 
