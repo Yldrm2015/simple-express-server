@@ -3,6 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const requestIp = require("request-ip");
+const useragent = require("useragent"); // User-Agent'ı detaylı parse etmek için
 
 dotenv.config();
 
@@ -21,8 +22,11 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **🔍 Tarayıcı Adı ve Simge Belirleme**
+// **🔍 Tarayıcı Adı ve Simge Belirleme (Daha Doğru Tespit)**
 function getBrowserInfo(userAgent) {
+    const agent = useragent.parse(userAgent); // User-Agent analiz kütüphanesi ile detaylı tespit
+
+    const browserName = agent.family || "Unknown Browser";
     const lowerUserAgent = userAgent.toLowerCase();
 
     if (lowerUserAgent.includes("edg")) return { name: "Microsoft Edge", emoji: "🔵" };
@@ -31,9 +35,11 @@ function getBrowserInfo(userAgent) {
     if (lowerUserAgent.includes("opr") || lowerUserAgent.includes("opera")) return { name: "Opera", emoji: "🟥" };
     if (lowerUserAgent.includes("firefox")) return { name: "Mozilla Firefox", emoji: "🦊" };
     if (lowerUserAgent.includes("safari") && !lowerUserAgent.includes("chrome")) return { name: "Safari", emoji: "🍏" };
-    if (lowerUserAgent.includes("chrome") && !lowerUserAgent.includes("edg") && !lowerUserAgent.includes("yabrowser")) return { name: "Google Chrome", emoji: "🌍" };
-    
-    return { name: "Unknown Browser", emoji: "❓" };
+    if (lowerUserAgent.includes("chrome") && !lowerUserAgent.includes("edg") && !lowerUserAgent.includes("yabrowser") && !lowerUserAgent.includes("opr")) {
+        return { name: "Google Chrome", emoji: "🌍" };
+    }
+
+    return { name: browserName, emoji: "❓" }; // Bilinmeyen tarayıcılar için
 }
 
 // **🛡️ Sunucu Tarafında Bot Tespiti**
