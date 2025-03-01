@@ -10,9 +10,9 @@
 
     <p><strong>Sunucu Tespiti:</strong> ✅ Not a bot.</p>
     <p id="browser-info">Detecting Browser...</p>
+    <p id="js-detection">JavaScript Detection: Checking...</p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
-    <p id="js-detection">JavaScript Detection: Checking...</p>
 
     <noscript>
         <p style="color: yellow; font-weight: bold;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
@@ -81,7 +81,9 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("✅ [BOTD SUCCESS]:", data);
-                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + JSON.stringify(data, null, 2);
+                    document.getElementById("js-detection").innerHTML = `JavaScript Detection: ${JSON.stringify(data, null, 2)}
+                        <br><strong>Request ID:</strong> ${requestId}
+                        <br><strong>Visitor ID:</strong> ${visitorId}`;
                 })
                 .catch(error => {
                     console.error("❌ [BOTD ERROR]:", error);
