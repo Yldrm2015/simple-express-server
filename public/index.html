@@ -24,7 +24,7 @@
             let browserName = "Unknown";
             let browserIcon = "❓";
 
-            // 🦁 Brave özel tespiti (Brave kendini Chrome gibi gösterdiği için bu gerekli)
+            // **🦁 Brave Tespiti (Brave kendini Chrome gibi gösteriyor, özel kontrol gerekli)**
             if (navigator.brave && await navigator.brave.isBrave()) {
                 browserName = "Brave";
                 browserIcon = "🦁";
@@ -45,12 +45,55 @@
                 browserIcon = "🌍";
             }
 
-            // Browser bilgisini ekrana yazdır
+            // **Browser bilgisini ekrana yazdır**
             document.getElementById("browser-info").innerHTML = `<strong>Browser Info:</strong> ${browserIcon} ${browserName}`;
         }
 
-        // Sayfa yüklendiğinde çalıştır
-        document.addEventListener("DOMContentLoaded", detectBrowser);
+        // **FingerprintJS ile Bot Tespiti ve Request ID / Visitor ID Alma**
+        async function detectBotD() {
+            try {
+                console.log("🔄 [INFO] Fetching BotD fingerprint...");
+
+                const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
+                    .then(FingerprintJS => FingerprintJS.load());
+
+                const fp = await fpPromise;
+                const result = await fp.get();
+
+                const requestId = result.requestId;
+                const visitorId = result.visitorId;
+
+                document.getElementById("request-id").innerText = "Request ID: " + requestId;
+                document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
+
+                console.log("📡 [BOTD] Sending Request ID to server:", requestId);
+
+                fetch('/botd-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requestId, visitorId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("✅ [BOTD SUCCESS]:", data);
+                    document.getElementById("js-detection").innerText = "JavaScript Detection: " + JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error("❌ [BOTD ERROR]:", error);
+                    document.getElementById("js-detection").innerText = "BotD Error: " + error.message;
+                });
+
+            } catch (error) {
+                console.error("❌ [ERROR] FingerprintJS Error:", error);
+                document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
+            }
+        }
+
+        // **Sayfa yüklendiğinde fonksiyonları çalıştır**
+        document.addEventListener("DOMContentLoaded", async () => {
+            await detectBrowser();
+            await detectBotD();
+        });
     </script>
 </body>
 </html>
