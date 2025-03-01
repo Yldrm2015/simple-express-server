@@ -89,8 +89,9 @@ app.get("/", async (req, res) => {
 
             <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
             <p id="browser-info">
-                <strong>Browser Info:</strong> ${browserInfo.name}
+                <strong>Browser Info:</strong> 
                 <img src="/images/${browserInfo.icon}" alt="${browserInfo.name}" width="32px">
+                ${browserInfo.name}
             </p>
             <p id="request-id">Request ID: Waiting...</p>
             <p id="visitor-id">Visitor ID: Waiting...</p>
