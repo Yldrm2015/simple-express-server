@@ -24,7 +24,6 @@
             let browserName = "Unknown";
             let browserIcon = "❓";
 
-            // **🦁 Brave Tespiti (Kesin Çözüm!)**
             let isBrave = false;
             if (navigator.brave !== undefined) {
                 isBrave = await navigator.brave.isBrave();
@@ -50,11 +49,9 @@
                 browserIcon = "🌍";
             }
 
-            // **Tarayıcı bilgisini ekrana yazdır**
             document.getElementById("browser-info").innerHTML = `<strong>Browser Info:</strong> ${browserIcon} ${browserName}`;
         }
 
-        // **FingerprintJS ile Bot Tespiti ve Request ID / Visitor ID Alma**
         async function detectBotD() {
             try {
                 console.log("🔄 [INFO] Fetching BotD fingerprint...");
@@ -92,11 +89,18 @@
 
             } catch (error) {
                 console.error("❌ [ERROR] FingerprintJS Error:", error);
-                document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
+                
+                // **Brave için fallback çözümü ekliyoruz**
+                if (navigator.brave !== undefined) {
+                    document.getElementById("js-detection").innerHTML = `<strong>⚠️ Brave Tespit Edildi: </strong> Brave tarayıcısı izleme engelleme modu aktif olabilir!<br>
+                        <strong>Request ID:</strong> (Brave Engelliyor)<br>
+                        <strong>Visitor ID:</strong> (Brave Engelliyor)`;
+                } else {
+                    document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
+                }
             }
         }
 
-        // **Sayfa yüklendiğinde fonksiyonları çalıştır**
         document.addEventListener("DOMContentLoaded", async () => {
             await detectBrowser();
             await detectBotD();
