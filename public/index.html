@@ -8,7 +8,7 @@
 <body>
     <h1>Bot Detection Test</h1>
 
-    <p><strong>Sunucu Tespiti:</strong> {{SERVER_RESULT}}</p>
+    <p><strong>Sunucu Tespiti:</strong> ✅ Not a bot.</p>
     <p id="browser-info">Detecting Browser...</p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
@@ -24,6 +24,7 @@
             let browserName = "Unknown";
             let browserIcon = "❓";
 
+            // 🦁 Brave özel tespiti (Brave kendini Chrome gibi gösterdiği için bu gerekli)
             if (navigator.brave && await navigator.brave.isBrave()) {
                 browserName = "Brave";
                 browserIcon = "🦁";
@@ -44,9 +45,11 @@
                 browserIcon = "🌍";
             }
 
+            // Browser bilgisini ekrana yazdır
             document.getElementById("browser-info").innerHTML = `<strong>Browser Info:</strong> ${browserIcon} ${browserName}`;
         }
 
+        // Sayfa yüklendiğinde çalıştır
         document.addEventListener("DOMContentLoaded", detectBrowser);
     </script>
 </body>
