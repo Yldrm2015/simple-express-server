@@ -15,7 +15,7 @@
     "node-cache": "^5.1.2",
     "@fingerprintjs/fingerprintjs-pro-server-api": "^2.0.0",
     "request-ip": "^2.1.3",
-    "useragent": "^2.3.0"  // 📌 EKLEDİK
+    "useragent": "^2.3.0"
   },
   "engines": {
     "node": "18.x"
