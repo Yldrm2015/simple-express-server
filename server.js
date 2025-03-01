@@ -21,28 +21,28 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **Browser Adı ve İkon Belirleme**
+// **Tarayıcı Adı ve Emoji Belirleme**
 function getBrowserInfo(userAgent) {
     const browsers = [
-        { name: "Google Chrome", keyword: "chrome", icon: "chrome.png" },
-        { name: "Mozilla Firefox", keyword: "firefox", icon: "firefox.png" },
-        { name: "Microsoft Edge", keyword: "edg", icon: "edge.png" },
-        { name: "Opera", keyword: "opr", icon: "opera.png" },
-        { name: "Brave", keyword: "brave", icon: "brave.png" },
-        { name: "Safari", keyword: "safari", icon: "safari.png" },
-        { name: "Yandex", keyword: "yabrowser", icon: "yandex.png" }
+        { name: "Google Chrome", keyword: "chrome", emoji: "🌍" },
+        { name: "Mozilla Firefox", keyword: "firefox", emoji: "🦊" },
+        { name: "Microsoft Edge", keyword: "edg", emoji: "🔵" },
+        { name: "Opera", keyword: "opr", emoji: "🟥" },
+        { name: "Brave", keyword: "brave", emoji: "🦁" },
+        { name: "Safari", keyword: "safari", emoji: "🍏" },
+        { name: "Yandex", keyword: "yabrowser", emoji: "🟡" }
     ];
 
     const lowerUserAgent = userAgent.toLowerCase();
     for (const browser of browsers) {
         if (lowerUserAgent.includes(browser.keyword)) {
-            return { name: browser.name, icon: browser.icon };
+            return { name: browser.name, emoji: browser.emoji };
         }
     }
-    return { name: "Unknown", icon: "unknown.png" };
+    return { name: "Unknown", emoji: "❓" };
 }
 
-// **🛡️ Sunucu Tarafında Bot Tespiti (JS Kapalıyken de Çalışır)**
+// **🛡️ Sunucu Tarafında Bot Tespiti**
 app.get("/", async (req, res) => {
     const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"] || "Unknown";
@@ -56,14 +56,12 @@ app.get("/", async (req, res) => {
     let isBot = false;
     let reason = "✅ Not a bot.";
 
-    // **User-Agent bazlı bot tespiti**
     if (BOT_USER_AGENTS.some(botStr => userAgent.toLowerCase().includes(botStr))) {
         isBot = true;
         reason = "🚨 BOT DETECTED: Suspicious User-Agent!";
         console.warn("🚨 [BOT DETECTED] IP:", ip, "User-Agent:", userAgent);
     }
 
-    // **WebDriver tespiti**
     if (webdriver) {
         isBot = true;
         reason = "🚨 BOT DETECTED: WebDriver aktif!";
@@ -89,9 +87,7 @@ app.get("/", async (req, res) => {
 
             <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
             <p id="browser-info">
-                <strong>Browser Info:</strong> 
-                <img src="/images/${browserInfo.icon}" alt="${browserInfo.name}" width="32px">
-                ${browserInfo.name}
+                <strong>Browser Info:</strong> ${browserInfo.emoji} ${browserInfo.name}
             </p>
             <p id="js-detection">JavaScript Detection: Checking...</p>
 
@@ -138,7 +134,7 @@ app.get("/", async (req, res) => {
     `);
 });
 
-// **🛡️ BotD API ile Tarayıcı Üzerinden Tespit (JSON Formatında Çalışır)**
+// **🛡️ BotD API ile Tarayıcı Üzerinden Tespit**
 app.post("/botd-test", async (req, res) => {
     try {
         const { requestId, visitorId } = req.body;
