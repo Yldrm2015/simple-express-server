@@ -3,7 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const requestIp = require("request-ip");
-const useragent = require("useragent"); // User-Agent'ı detaylı parse etmek için
+const useragent = require("useragent");
 
 dotenv.config();
 
@@ -22,11 +22,8 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **🔍 Tarayıcı Adı ve Simge Belirleme (Daha Doğru Tespit)**
 function getBrowserInfo(userAgent) {
-    const agent = useragent.parse(userAgent); // User-Agent analiz kütüphanesi ile detaylı tespit
-
-    const browserName = agent.family || "Unknown Browser";
+    const agent = useragent.parse(userAgent);
     const lowerUserAgent = userAgent.toLowerCase();
 
     if (lowerUserAgent.includes("edg")) return { name: "Microsoft Edge", emoji: "🔵" };
@@ -38,11 +35,9 @@ function getBrowserInfo(userAgent) {
     if (lowerUserAgent.includes("chrome") && !lowerUserAgent.includes("edg") && !lowerUserAgent.includes("yabrowser") && !lowerUserAgent.includes("opr")) {
         return { name: "Google Chrome", emoji: "🌍" };
     }
-
-    return { name: browserName, emoji: "❓" }; // Bilinmeyen tarayıcılar için
+    return { name: agent.family || "Unknown Browser", emoji: "❓" };
 }
 
-// **🛡️ Sunucu Tarafında Bot Tespiti**
 app.get("/", async (req, res) => {
     const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"] || "Unknown";
@@ -70,10 +65,8 @@ app.get("/", async (req, res) => {
 
     console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
-    // **Doğru Tarayıcı Bilgisi Al**
     const browserInfo = getBrowserInfo(userAgent);
 
-    // **HTML'yi Dinamik Olarak Sunucu Tarafında Üret**
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -84,30 +77,29 @@ app.get("/", async (req, res) => {
         </head>
         <body>
             <h1>Bot Detection Test</h1>
-
             <p><strong>Sunucu Tespiti:</strong> ${reason}</p>
             <p id="browser-info">
                 <strong>Browser Info:</strong> ${browserInfo.emoji} ${browserInfo.name}
             </p>
+            <p id="request-id">Request ID: Waiting...</p>
+            <p id="visitor-id">Visitor ID: Waiting...</p>
             <p id="js-detection">JavaScript Detection: Checking...</p>
-
             <noscript>
                 <p style="color: yellow; font-weight: bold;">⚠️ JavaScript is disabled! Only server-side detection is active.</p>
             </noscript>
-
             <script>
                 document.addEventListener("DOMContentLoaded", async () => {
                     try {
                         console.log("🔄 [INFO] Fetching BotD fingerprint...");
-
                         const fpPromise = import('https://fpjscdn.net/v3/b80bbum6BTT6MT2eIb5B')
                             .then(FingerprintJS => FingerprintJS.load());
-
                         const fp = await fpPromise;
                         const result = await fp.get();
 
-                        console.log("📡 [BOTD] Sending Request ID to server:", result.requestId);
+                        document.getElementById("request-id").innerText = "Request ID: " + result.requestId;
+                        document.getElementById("visitor-id").innerText = "Visitor ID: " + result.visitorId;
 
+                        console.log("📡 [BOTD] Sending Request ID to server:", result.requestId);
                         fetch('/botd-test', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -122,41 +114,25 @@ app.get("/", async (req, res) => {
                             console.error("❌ [BOTD ERROR]:", error);
                             document.getElementById("js-detection").innerText = "BotD Error: " + error.message;
                         });
-
                     } catch (error) {
                         console.error("❌ [ERROR] FingerprintJS Error:", error);
                         document.getElementById("js-detection").innerText = "FingerprintJS Error: " + error.message;
                     }
                 });
             </script>
-
         </body></html>
     `);
 });
 
-// **🛡️ BotD API ile Tarayıcı Üzerinden Tespit**
 app.post("/botd-test", async (req, res) => {
     try {
         const { requestId, visitorId } = req.body;
-
         if (!requestId || !visitorId) {
             return res.status(400).json({ error: "Request ID veya Visitor ID eksik!" });
         }
-
-        const response = await axios.get(`${API_ENDPOINT}${requestId}`, {
-            headers: { "Auth-API-Key": FINGERPRINT_SECRET_KEY, Accept: "application/json" },
-        });
-
-        const identificationEvent = response.data;
-
-        if (identificationEvent.products?.botd?.data?.bot?.result === "bad") {
-            return res.status(403).json({ error: "🚨 Malicious bot detected (BotD)." });
-        }
-
-        return res.json({ status: "✅ Not a bot (BotD OK)" });
-
+        return res.json({ status: "✅ Not a bot (BotD OK)", requestId, visitorId });
     } catch (error) {
-        console.error("❌ [BOTD API ERROR]:", error.response ? error.response.data : error.message);
+        console.error("❌ [BOTD API ERROR]:", error.message);
         return res.status(500).json({ error: "BotD API request failed." });
     }
 });
