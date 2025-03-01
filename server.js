@@ -21,32 +21,26 @@ const BOT_USER_AGENTS = [
 
 console.log("✅ Server started in", NODE_ENV, "mode");
 
-// **Tarayıcı Adı ve Emoji Belirleme**
+// **🔍 Tarayıcı Adı ve Simge Belirleme**
 function getBrowserInfo(userAgent) {
-    const browsers = [
-        { name: "Google Chrome", keyword: "chrome", emoji: "🌍" },
-        { name: "Mozilla Firefox", keyword: "firefox", emoji: "🦊" },
-        { name: "Microsoft Edge", keyword: "edg", emoji: "🔵" },
-        { name: "Opera", keyword: "opr", emoji: "🟥" },
-        { name: "Brave", keyword: "brave", emoji: "🦁" },
-        { name: "Safari", keyword: "safari", emoji: "🍏" },
-        { name: "Yandex", keyword: "yabrowser", emoji: "🟡" }
-    ];
-
     const lowerUserAgent = userAgent.toLowerCase();
-    for (const browser of browsers) {
-        if (lowerUserAgent.includes(browser.keyword)) {
-            return { name: browser.name, emoji: browser.emoji };
-        }
-    }
-    return { name: "Unknown", emoji: "❓" };
+
+    if (lowerUserAgent.includes("edg")) return { name: "Microsoft Edge", emoji: "🔵" };
+    if (lowerUserAgent.includes("brave")) return { name: "Brave", emoji: "🦁" };
+    if (lowerUserAgent.includes("yabrowser")) return { name: "Yandex Browser", emoji: "🟡" };
+    if (lowerUserAgent.includes("opr") || lowerUserAgent.includes("opera")) return { name: "Opera", emoji: "🟥" };
+    if (lowerUserAgent.includes("firefox")) return { name: "Mozilla Firefox", emoji: "🦊" };
+    if (lowerUserAgent.includes("safari") && !lowerUserAgent.includes("chrome")) return { name: "Safari", emoji: "🍏" };
+    if (lowerUserAgent.includes("chrome") && !lowerUserAgent.includes("edg") && !lowerUserAgent.includes("yabrowser")) return { name: "Google Chrome", emoji: "🌍" };
+    
+    return { name: "Unknown Browser", emoji: "❓" };
 }
 
 // **🛡️ Sunucu Tarafında Bot Tespiti**
 app.get("/", async (req, res) => {
     const ip = requestIp.getClientIp(req) || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"] || "Unknown";
-    const webdriver = req.headers["webdriver"] !== undefined; // WebDriver var mı?
+    const webdriver = req.headers["webdriver"] !== undefined;
 
     console.log("🔍 [SERVER-SIDE DETECTION] Request received:");
     console.log("   - IP:", ip);
@@ -70,7 +64,7 @@ app.get("/", async (req, res) => {
 
     console.log("✅ [SERVER-SIDE DETECTION RESULT]:", reason);
 
-    // **Tarayıcı Bilgisini Al**
+    // **Doğru Tarayıcı Bilgisi Al**
     const browserInfo = getBrowserInfo(userAgent);
 
     // **HTML'yi Dinamik Olarak Sunucu Tarafında Üret**
