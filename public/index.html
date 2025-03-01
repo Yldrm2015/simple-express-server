@@ -9,6 +9,7 @@
     <h1>Bot Detection Test</h1>
 
     <p><strong>Sunucu Tespiti:</strong> {{SERVER_RESULT}}</p>
+    <p id="browser-info">Browser: Detecting...</p>
     <p id="request-id">Request ID: Waiting...</p>
     <p id="visitor-id">Visitor ID: Waiting...</p>
     <p id="status">Detecting...</p>
@@ -30,9 +31,11 @@
 
                 const requestId = result.requestId;
                 const visitorId = result.visitorId;
+                const browser = result.components.browserName.value; // Tarayıcı adı
 
                 document.getElementById("request-id").innerText = "Request ID: " + requestId;
                 document.getElementById("visitor-id").innerText = "Visitor ID: " + visitorId;
+                document.getElementById("browser-info").innerText = "Browser: " + browser;
 
                 console.log("📡 [BOTD] Sending Request ID to server:", requestId);
 
@@ -50,6 +53,7 @@
                     console.error("❌ [BOTD ERROR]:", error);
                     document.getElementById("status").innerText = "BotD Error: " + error.message;
                 });
+
             } catch (error) {
                 console.error("❌ [ERROR] FingerprintJS Error:", error);
                 document.getElementById("status").innerText = "FingerprintJS Error: " + error.message;
