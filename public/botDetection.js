@@ -468,4 +468,491 @@ class BotDetectionSystem {
       'Arial', 'Arial Black', 'Arial Narrow', 'Calibri', 'Cambria', 'Cambria Math',
       'Comic Sans MS', 'Courier', 'Courier New', 'Georgia', 'Helvetica', 'Impact',
       'Lucida Console', 'Lucida Sans Unicode', 'Microsoft Sans Serif', 'Palatino Linotype',
-      'Segoe UI', 'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS
+      'Segoe UI', 'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana'
+    ];
+    
+    const testString = 'mmmmmmmmmmlli';
+    const testSize = '72px';
+    const h = document.createElement('div');
+    
+    h.style.position = 'absolute';
+    h.style.left = '-9999px';
+    h.style.visibility = 'hidden';
+    
+    const baseFontWidths = {};
+    const detected = [];
+
+    // Add the test div to the DOM
+    document.body.appendChild(h);
+    
+    // Get width with base fonts
+    for (let base of baseFonts) {
+      h.style.fontFamily = base;
+      h.style.fontSize = testSize;
+      h.innerHTML = testString;
+      baseFontWidths[base] = h.clientWidth;
+    }
+    
+    // Check for each font
+    for (let font of fontList) {
+      let fontDetected = false;
+      
+      // Try with each base font
+      for (let base of baseFonts) {
+        h.style.fontFamily = `'${font}', ${base}`;
+        h.style.fontSize = testSize;
+        h.innerHTML = testString;
+        
+        // If width is different than base font, the font is available
+        if (h.clientWidth !== baseFontWidths[base]) {
+          fontDetected = true;
+          break;
+        }
+      }
+      
+      if (fontDetected) {
+        detected.push(font);
+      }
+    }
+    
+    // Clean up
+    document.body.removeChild(h);
+    
+    return detected;
+  }
+
+  detectPlugins() {
+    const plugins = [];
+    
+    if (navigator.plugins) {
+      for (let i = 0; i < navigator.plugins.length; i++) {
+        const plugin = navigator.plugins[i];
+        const pluginInfo = {
+          name: plugin.name,
+          description: plugin.description,
+          filename: plugin.filename,
+          mimeTypes: []
+        };
+        
+        // Get mime types
+        for (let j = 0; j < plugin.length; j++) {
+          const mime = plugin[j];
+          pluginInfo.mimeTypes.push({
+            type: mime.type,
+            description: mime.description,
+            suffixes: mime.suffixes
+          });
+        }
+        
+        plugins.push(pluginInfo);
+      }
+    }
+    
+    return plugins;
+  }
+
+  // Network Controls
+  initializeNetworkControls() {
+    this.networkData = {
+      ipAddress: null,
+      connectionType: this.detectConnectionType(),
+      webRTCData: this.config.networkControls.checkWebRTC ? this.checkWebRTC() : null,
+      headersAnalyzed: false,
+      tcpFingerprint: null
+    };
+  }
+
+  detectConnectionType() {
+    const connection = navigator.connection || 
+                      navigator.mozConnection || 
+                      navigator.webkitConnection;
+    
+    if (connection) {
+      return {
+        type: connection.type,
+        effectiveType: connection.effectiveType,
+        downlink: connection.downlink,
+        rtt: connection.rtt,
+        saveData: connection.saveData
+      };
+    }
+    
+    return null;
+  }
+
+  checkWebRTC() {
+    // WebRTC leak check - will only work in supported browsers
+    const RTCPeerConnection = window.RTCPeerConnection || 
+                            window.webkitRTCPeerConnection || 
+                            window.mozRTCPeerConnection;
+    
+    if (!RTCPeerConnection) return null;
+    
+    const rtcData = {
+      localIPs: [],
+      publicIP: null
+    };
+    
+    // Create dummy data channel
+    const pc = new RTCPeerConnection({
+      iceServers: [{urls: "stun:stun.l.google.com:19302"}]
+    });
+    pc.createDataChannel("");
+    
+    // Event handler for ICE candidate
+    pc.onicecandidate = (ice) => {
+      if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+      
+      const candidateStr = ice.candidate.candidate;
+      const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/g.exec(candidateStr);
+      
+      if (ipMatch && ipMatch.length > 1) {
+        const ip = ipMatch[1];
+        
+        // Check if it's a local IP
+        if (/^(192\.168\.|169\.254\.|10\.|172\.(1[6-9]|2\d|3[0-1]))/.test(ip)) {
+          if (!rtcData.localIPs.includes(ip)) {
+            rtcData.localIPs.push(ip);
+          }
+        } else {
+          rtcData.publicIP = ip;
+        }
+      }
+    };
+    
+    // Create offer and set local description
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .catch(err => console.error('WebRTC detection error:', err));
+    
+    // Set a timeout to clean up
+    setTimeout(() => {
+      try {
+        pc.close();
+      } catch (e) {}
+    }, 5000);
+    
+    return rtcData;
+  }
+
+  analyzeHeaders(headers) {
+    // This would be called from server-side logic
+    // Placeholder for header analysis (would work with backend)
+    this.networkData.headersAnalyzed = true;
+    return {
+      userAgent: headers['user-agent'],
+      acceptLanguage: headers['accept-language'],
+      dnt: headers['dnt'],
+      via: headers['via'],
+      forwarded: headers['forwarded'],
+      xForwardedFor: headers['x-forwarded-for'],
+      cfConnectingIp: headers['cf-connecting-ip'],
+      xRealIp: headers['x-real-ip'],
+      hasProxyHeaders: !!(headers['via'] || headers['x-forwarded-for'] || headers['forwarded'])
+    };
+  }
+
+  // Cookie and Storage Management
+  initializeCookieStorage() {
+    this.storageData = {
+      fingerprint: null,
+      sessionId: this.generateSessionId(),
+      storedData: this.retrieveStoredData()
+    };
+    
+    // Set or update cookies
+    this.updateStoredData();
+  }
+
+  generateSessionId() {
+    // Generate a random session ID
+    return Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+  }
+
+  retrieveStoredData() {
+    // Try to retrieve data from localStorage and cookies
+    let storedData = {};
+    
+    try {
+      // Check localStorage for fingerprint data
+      const localData = localStorage.getItem('bot_detection_data');
+      if (localData) {
+        storedData.localStorage = JSON.parse(localData);
+      }
+      
+      // Check cookies
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'bot_detection_session') {
+          storedData.cookie = decodeURIComponent(value);
+        }
+      }
+    } catch (error) {
+      console.error('Error retrieving stored data:', error);
+    }
+    
+    return storedData;
+  }
+
+  updateStoredData() {
+    // Create a fingerprint from our collected data
+    const fingerprintData = {
+      canvas: this.fingerprintData.canvas ? this.fingerprintData.canvas.dataURL.substr(0, 32) : null,
+      webgl: this.fingerprintData.webgl ? this.fingerprintData.webgl.renderer : null,
+      audio: this.fingerprintData.audio ? this.fingerprintData.audio.hash : null,
+      screen: `${this.fingerprintData.screenMetrics.width}x${this.fingerprintData.screenMetrics.height}x${this.fingerprintData.screenMetrics.colorDepth}`,
+      timezone: new Date().getTimezoneOffset(),
+      language: navigator.language
+    };
+    
+    // Create a hash from the data
+    let fingerprintString = JSON.stringify(fingerprintData);
+    let hash = 0;
+    for (let i = 0; i < fingerprintString.length; i++) {
+      hash = ((hash << 5) - hash) + fingerprintString.charCodeAt(i);
+      hash |= 0; // Convert to 32bit integer
+    }
+    
+    this.storageData.fingerprint = hash.toString(16);
+    
+    // Store data
+    try {
+      // Update localStorage
+      localStorage.setItem('bot_detection_data', JSON.stringify({
+        fingerprint: this.storageData.fingerprint,
+        sessionId: this.storageData.sessionId,
+        timestamp: Date.now()
+      }));
+      
+      // Set cookie
+      document.cookie = `bot_detection_session=${encodeURIComponent(this.storageData.sessionId)}; path=/; max-age=86400`;
+    } catch (error) {
+      console.error('Error storing data:', error);
+    }
+  }
+
+  // Main Detection Functions
+  analyzeUser() {
+    // Combine all detection methods
+    const behaviorsOK = this.analyzeBehavior();
+    const fingerprintOK = this.analyzeFingerprint();
+    const networkOK = this.analyzeNetwork();
+    
+    // Overall bot score (0-1, higher means more bot-like)
+    const botScore = 1 - ((behaviorsOK ? 0.6 : 0) + (fingerprintOK ? 0.3 : 0) + (networkOK ? 0.1 : 0));
+    
+    return {
+      isBot: botScore > 0.7, // Threshold for bot detection
+      botScore,
+      behaviorsOK,
+      fingerprintOK,
+      networkOK,
+      details: {
+        behavior: this.getBehaviorDetails(),
+        fingerprint: this.getFingerprintDetails(),
+        network: this.getNetworkDetails()
+      }
+    };
+  }
+
+  analyzeBehavior() {
+    // Check all behavioral metrics
+    const mouseOK = this.assessMouseMovementNaturalness();
+    const scrollOK = this.assessScrollBehavior();
+    const keystrokesOK = this.assessKeystrokeNaturalness();
+    const interactionOK = this.assessInteractionTiming();
+    const copyPasteOK = this.assessCopyPasteActivity();
+    
+    // Check page focus ratio
+    const totalTime = Math.max(1, (Date.now() - this.behavioralData.lastActivity) / 1000);
+    const focusRatio = this.behavioralData.pageFocusTime / totalTime;
+    const focusOK = focusRatio >= this.config.behavioralThresholds.pageFocusRatio;
+    
+    // Calculate overall behavior score
+    const passingTests = [mouseOK, scrollOK, keystrokesOK, interactionOK, copyPasteOK, focusOK]
+      .filter(Boolean).length;
+    
+    // Require at least 3 passing tests if we have enough data
+    return passingTests >= 3;
+  }
+
+  analyzeFingerprint() {
+    // Analyze fingerprint for inconsistencies
+    
+    // Check if browser fingerprints seem consistent
+    const consistencyChecks = [];
+    
+    // WebGL and canvas should be available in modern browsers
+    if (this.fingerprintData.webgl === null && this.fingerprintData.canvas !== null) {
+      consistencyChecks.push(false);
+    }
+    
+    // Check for headless browser symptoms
+    const hasHeadlessSigns = 
+      navigator.plugins.length === 0 && 
+      navigator.languages.length === 0 &&
+      !this.fingerprintData.webgl;
+      
+    if (hasHeadlessSigns) {
+      consistencyChecks.push(false);
+    }
+    
+    // Check for mismatched screen dimensions
+    const screenWidth = this.fingerprintData.screenMetrics.width;
+    const screenHeight = this.fingerprintData.screenMetrics.height;
+    const availWidth = this.fingerprintData.screenMetrics.availWidth;
+    const availHeight = this.fingerprintData.screenMetrics.availHeight;
+    
+    if (availWidth > screenWidth || availHeight > screenHeight) {
+      consistencyChecks.push(false);
+    }
+    
+    // Calculate overall fingerprint consistency score
+const consistencyFailures = consistencyChecks.filter(check => check === false).length;
+const consistencyScore = 1 - (consistencyFailures / Math.max(1, consistencyChecks.length));
+
+// Pass if consistency score is high enough
+return consistencyScore > 0.7;
+}
+
+analyzeNetwork() {
+  // Check for suspicious network characteristics
+  
+  if (!this.config.networkControls.checkConnectionSpeed) {
+    return true; // Skip this check if not enabled
+  }
+  
+  const checks = [];
+  
+  // Check if we have detected any proxy indicators
+  if (this.config.networkControls.blockKnownProxies && 
+      this.networkData.headersAnalyzed && 
+      this.networkData.hasProxyHeaders) {
+    checks.push(false);
+  }
+  
+  // Check WebRTC IP mismatch with reported IP (if data available)
+  if (this.config.networkControls.checkWebRTC && 
+      this.networkData.webRTCData && 
+      this.networkData.ipAddress && 
+      this.networkData.webRTCData.publicIP && 
+      this.networkData.webRTCData.publicIP !== this.networkData.ipAddress) {
+    checks.push(false);
+  }
+  
+  // TCP fingerprinting analysis (would require server-side implementation)
+  if (this.config.networkControls.tcpFingerprintingStrict && 
+      this.networkData.tcpFingerprint && 
+      this.networkData.tcpFingerprint.suspicious) {
+    checks.push(false);
+  }
+  
+  // Calculate network trust score
+  const failedChecks = checks.filter(check => check === false).length;
+  
+  // If no checks failed or no checks were performed, return true
+  return failedChecks === 0;
+}
+
+getBehaviorDetails() {
+  // Return detailed behavior metrics for analysis
+  return {
+    mouseMovement: {
+      isNatural: this.assessMouseMovementNaturalness(),
+      dataPoints: this.behavioralData.mouseMovements.length
+    },
+    scrollBehavior: {
+      isNatural: this.assessScrollBehavior(),
+      dataPoints: this.behavioralData.scrollEvents.length
+    },
+    keystrokes: {
+      isNatural: this.assessKeystrokeNaturalness(),
+      dataPoints: this.behavioralData.keystrokePatterns.length
+    },
+    interactions: {
+      isNatural: this.assessInteractionTiming(),
+      dataPoints: this.behavioralData.pageInteractions.length
+    },
+    copyPaste: {
+      isNatural: this.assessCopyPasteActivity(),
+      count: this.behavioralData.copyPasteCount
+    },
+    pageFocus: {
+      totalFocusTime: this.behavioralData.pageFocusTime,
+      totalTime: Math.max(1, (Date.now() - this.behavioralData.lastActivity) / 1000),
+      ratio: this.behavioralData.pageFocusTime / Math.max(1, (Date.now() - this.behavioralData.lastActivity) / 1000)
+    }
+  };
+}
+
+getFingerprintDetails() {
+  // Return fingerprint details with sensitive info removed
+  return {
+    webgl: this.fingerprintData.webgl ? {
+      vendor: this.fingerprintData.webgl.vendor,
+      renderer: this.fingerprintData.webgl.renderer
+    } : null,
+    screenMetrics: this.fingerprintData.screenMetrics,
+    fonts: {
+      count: this.fingerprintData.fonts.length,
+      commonFonts: this.fingerprintData.fonts.slice(0, 5) // Only return first 5 fonts
+    },
+    plugins: {
+      count: this.fingerprintData.plugins.length,
+      names: this.fingerprintData.plugins.map(p => p.name)
+    },
+    audio: this.fingerprintData.audio ? {
+      sampleRate: this.fingerprintData.audio.sampleRate
+    } : null,
+    systemResources: {
+      hardwareConcurrency: this.fingerprintData.systemResources.hardwareConcurrency,
+      deviceMemory: this.fingerprintData.systemResources.deviceMemory,
+      cpuPerformanceBucket: this.getBucketedPerformance(this.fingerprintData.systemResources.cpuPerformance)
+    },
+    fingerprintHash: this.storageData.fingerprint
+  };
+}
+
+getBucketedPerformance(performance) {
+  // Convert raw performance to bucket to hide exact values
+  if (performance < 50) return "very_fast";
+  if (performance < 100) return "fast";
+  if (performance < 200) return "medium";
+  if (performance < 400) return "slow";
+  return "very_slow";
+}
+
+getNetworkDetails() {
+  // Return network analysis details
+  return {
+    connectionType: this.networkData.connectionType,
+    webRTC: this.networkData.webRTCData ? {
+      hasLocalIPs: this.networkData.webRTCData.localIPs.length > 0,
+      hasPublicIP: !!this.networkData.webRTCData.publicIP
+    } : null,
+    headersAnalyzed: this.networkData.headersAnalyzed,
+    hasProxyIndicators: this.networkData.headersAnalyzed ? this.networkData.hasProxyHeaders : null
+  };
+}
+
+// Public API methods
+isLikelyBot() {
+  return this.analyzeUser().isBot;
+}
+
+getDetectionScore() {
+  return this.analyzeUser().botScore;
+}
+
+getDetailedAnalysis() {
+  return this.analyzeUser();
+}
+}
+
+// Export the module
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = BotDetectionSystem;
+} else {
+  window.BotDetectionSystem = BotDetectionSystem;
+}
