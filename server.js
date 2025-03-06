@@ -1,84 +1,59 @@
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
 const path = require('path');
-const helmet = require('helmet');
-const compression = require('compression');
+const bodyParser = require('body-parser');
 
-// Initialize express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts for the bot detection system
-      connectSrc: ["'self'", "https://api.ipify.org"], // Allow connection to IP API
-      imgSrc: ["'self'", "data:"], // Allow data URIs for test images
-      styleSrc: ["'self'", "'unsafe-inline'"]
-    }
-  }
-}));
-app.use(compression());
-app.use(bodyParser.json({ limit: '1mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Serve static files
+app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API endpoint for bot detection verification
 app.post('/api/bot-detection', (req, res) => {
-  // Get data from request
-  const { fingerprint, behavioral, network, storage, headers } = req.body;
+  console.log('Bot detection data received:');
+  console.log(JSON.stringify(req.body, null, 2));
   
-  // Log detection data for debugging
-  console.log('Bot detection verification requested:', {
-    ip: req.ip,
-    userAgent: req.headers['user-agent'],
-    timestamp: new Date().toISOString()
-  });
+  // In a real implementation, you would analyze the data here
+  // For this demo, we'll just return a simple result based on some basic checks
   
-  // Implement server-side verification logic
-  // This is a simplified example - in production, you would have more sophisticated checks
+  const data = req.body;
+  let isHuman = true;
+  const reasons = [];
   
-  // Check for obvious bot indicators
-  const isBotUserAgent = /bot|crawl|spider|headless|scrape|selenium|puppeteer/i.test(headers.userAgent);
+  // Check for automation flags
+  if (data.fingerprint && data.fingerprint.webgl) {
+    const renderer = data.fingerprint.webgl.renderer || '';
+    if (renderer.includes('SwiftShader') || renderer.includes('ANGLE') || 
+        renderer.includes('VMware') || renderer.includes('llvmpipe')) {
+      isHuman = false;
+      reasons.push('Virtualized GPU detected');
+    }
+  }
   
-  // Check browser fingerprint consistency
-  const hasValidFingerprint = fingerprint && fingerprint.canvas && fingerprint.webgl;
+  // Check for behavioral anomalies
+  if (data.behavioral) {
+    if (data.behavioral.mouseMovements && data.behavioral.mouseMovements.length < 5) {
+      isHuman = false;
+      reasons.push('Insufficient mouse movement');
+    }
+    
+    if (data.behavioral.copyPasteCount > 3) {
+      isHuman = false;
+      reasons.push('Excessive copy-paste operations');
+    }
+  }
   
-  // Check behavioral patterns
-  const hasNaturalBehavior = behavioral && 
-                           behavioral.mouseMovements && 
-                           behavioral.mouseMovements.length > 10 &&
-                           behavioral.scrollEvents &&
-                           behavioral.scrollEvents.length > 5;
-  
-  // Make determination based on checks
-  const isHuman = !isBotUserAgent && hasValidFingerprint && hasNaturalBehavior;
-  
-  // Send response
+  // Return the result
   res.json({
     isHuman,
-    timestamp: new Date().toISOString(),
-    // Include reasons for detection (only in development)
-    reasons: process.env.NODE_ENV === 'development' ? {
-      userAgent: !isBotUserAgent,
-      fingerprint: hasValidFingerprint,
-      behavior: hasNaturalBehavior
-    } : undefined
+    reasons,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Serve main HTML page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Start server
+// Start the server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Bot Detection test page available at http://localhost:${PORT}`);
 });
