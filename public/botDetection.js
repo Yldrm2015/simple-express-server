@@ -2,7 +2,7 @@ class BotDetectionSystem {
   constructor(config = {}) {
     // Configuration options with default settings
     this.config = {
-      // Behavioral analysis thresholds
+  /*    // Behavioral analysis thresholds
       behavioralThresholds: {
         mouseMovementNaturalness: 0.7,
         scrollSpeedVariance: 0.5,
@@ -10,7 +10,7 @@ class BotDetectionSystem {
         interactionTimingVariance: 0.6,
         pageFocusRatio: 0.5,
         copyPasteCount: 3 // Max allowed copy-paste actions
-      },
+      },*/
       
       // Network and connection controls
       networkControls: {
@@ -19,6 +19,47 @@ class BotDetectionSystem {
         tcpFingerprintingStrict: true,
         checkConnectionSpeed: true
       },
+
+      // Initialize the bot detection system
+function initBotDetection() {
+  // Create a new instance of the BotDetectionSystem
+  const botDetection = new BotDetectionSystem({
+    // You can customize configuration here if neededbehavioralThresholds: {
+      mouseMovementNaturalness: 0.6,
+      scrollSpeedVariance: 0.4,
+      keystrokeNaturalness: 0.7,
+      interactionTimingVariance: 0.5,
+      pageFocusRatio: 0.4,
+      copyPasteCount: 5
+    }
+  });
+   // Public API for the detection system
+  return {
+    detectBot: async function() {
+      // Run the detection and return the results
+      const analysis = botDetection.getDetailedAnalysis();
+
+      return {
+        isHuman: !analysis.isBot,
+        botScore: analysis.botScore,
+        details: {
+          'Mouse Movement': analysis.details.behavior.mouseMovement.isNatural ? 'Natural' : 'Suspicious',
+          'Scroll Behavior': analysis.details.behavior.scrollBehavior.isNatural ? 'Natural' : 'Suspicious',
+          'Keystroke Pattern': analysis.details.behavior.keystrokes.isNatural ? 'Natural' : 'Suspicious',
+          'Interaction Timing': analysis.details.behavior.interactions.isNatural ? 'Natural' : 'Suspicious',
+          'Copy/Paste Activity': analysis.details.behavior.copyPaste.isNatural ? 'Normal' : 'Excessive',
+          'Page Focus Ratio': analysis.details.behavior.pageFocus.ratio.toFixed(2),
+          'Browser Fingerprint': analysis.fingerprintOK ? 'Consistent' : 'Inconsistent',
+          'Network Analysis': analysis.networkOK ? 'Normal' : 'Suspicious'
+        }
+      };
+    },
+
+    getDetailedAnalysis: function() {
+      return botDetection.getDetailedAnalysis();
+    }
+  };
+}
       
       // Fallback mechanisms for when JavaScript is disabled
       fallbackMethods: {
