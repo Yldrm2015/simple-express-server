@@ -769,17 +769,17 @@ class BotDetectionSystem {
     const fingerprintScore = Object.values(fingerprintSignals)
       .reduce((score, signal) => score + (signal ? 1 : 0), 0) / Object.keys(fingerprintSignals).length;
     
-    // Network-related checks
-    const networkSignals = {
-      usingProxy: this.config.networkControls.blockKnownProxies ? 
-        (this.networkData.webRTCData && this.networkData.webRTCData.localIPs.length === 0) : false,
-      connectionTypeNormal: this.networkData.connectionType ? 
-        (this.networkData.connectionType.type !== 'none' && this.networkData.connectionType.effectiveType !== 'slow-2g') : true
-    };
-    
-    // Calculate network score
-    const networkScore = Object.values(networkSignals)
-      .reduce((score, signal) => score + (!signal ? 1 : 0), 0) / Object.keys(networkSignals).length;
+// Network-related checks
+const networkSignals = {
+  notUsingProxy: this.config.networkControls.blockKnownProxies ? 
+    !(this.networkData.webRTCData && this.networkData.webRTCData.localIPs.length === 0) : true,
+  connectionTypeNormal: this.networkData.connectionType ? 
+    (this.networkData.connectionType.type !== 'none' && this.networkData.connectionType.effectiveType !== 'slow-2g') : true
+};
+
+// Calculate network score
+const networkScore = Object.values(networkSignals)
+  .reduce((score, signal) => score + (signal ? 1 : 0), 0) / Object.keys(networkSignals).length;
     
     // Weight the different scores
     const weightedScore = (behavioralScore * 0.6) + (fingerprintScore * 0.3) + (networkScore * 0.1);
