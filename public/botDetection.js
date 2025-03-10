@@ -156,7 +156,7 @@ class BotDetectionSystem {
 
   assessMouseMovementNaturalness() {
     const movements = this.behavioralData.mouseMovements;
-    if (movements.length < 10) return true;
+  if (movements.length < 10) return movements.length / 10;
 
     // Check for completely straight lines (bot indicator)
     let straightLineCount = 0;
