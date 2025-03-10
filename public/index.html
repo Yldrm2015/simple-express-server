@@ -1,199 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Detection System</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 5px;
-        }
-        
-        h1, h2 {
-            color: #2c3e50;
-        }
-        
-        .status-panel {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-left: 5px solid #3498db;
-            margin-bottom: 20px;
-        }
-        
-        .interaction-area {
-            background-color: #ecf0f1;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        textarea {
-            width: 100%;
-            height: 100px;
-            margin-bottom: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        
-        button:hover {
-            background-color: #2980b9;
-        }
-        
-        #detection-log {
-            height: 200px;
-            overflow-y: auto;
-            background-color: #f5f5f5;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .human {
-            color: #27ae60;
-        }
-        
-        .bot {
-            color: #e74c3c;
-        }
-        
-        .warning {
-            color: #f39c12;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot Detection System Test</title>
+  <style>
+    /* Your CSS styles */
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Bot Detection System Demo</h1>
-        <p>This page demonstrates a sophisticated bot detection system that analyzes user behavior patterns to distinguish between humans and automated bots.</p>
-        
-        <div class="status-panel" id="detection-status">
-            <h2>Detection Status</h2>
-            <div>Collecting data...</div>
-        </div>
-        
-        <div class="interaction-area">
-            <h2>Interaction Area</h2>
-            <p>Use this area to interact with the page so the system can analyze your behavior.</p>
-            <textarea id="interaction-text" placeholder="Type something here..."></textarea>
-            <button id="submit-btn">Submit</button>
-        </div>
-        
-        <h2>Detection Log</h2>
-        <div id="detection-log"></div>
+  <h1>Bot Detection System Test</h1>
+  
+  <div class="test-section">
+    <h2>Bot Detection Status</h2>
+    <p>Interact with this page naturally to test the bot detection system. The system will analyze your behavior to determine if you're human or a bot.</p>
+    <button id="run-detection">Run Detection Now</button>
+    
+    <div class="result-section">
+      <p>Current Status: <span id="detection-status" class="status">Not yet checked</span></p>
+      <p>Last Checked: <span id="last-checked">Never</span></p>
+      <div id="detection-details"></div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Interactive Tests</h2>
+    <p>Complete these tasks to generate behavior patterns for analysis:</p>
+    
+    <h3>1. Mouse Movement Test</h3>
+    <div style="height: 100px; border: 1px dashed #ccc; margin-bottom: 20px;">
+      Move your mouse around in this area naturally for a few seconds
     </div>
     
-    <!-- Bot Detection Script -->
-    <script src="bot-detection-system.js"></script>
+    <h3>2. Keyboard Input Test</h3>
+    <p>Type a short message in this box:</p>
+    <input type="text" id="keyboard-test" placeholder="Type some text here...">
     
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Elements
-        const statusPanel = document.getElementById('detection-status');
-        const logArea = document.getElementById('detection-log');
-        const submitBtn = document.getElementById('submit-btn');
-        const textArea = document.getElementById('interaction-text');
-        
-        // Initialize the bot detection system
-        const botDetector = new BotDetectionSystem();
-        
-        // Log entry function
-        function addLogEntry(message, type = 'info') {
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logArea.appendChild(entry);
-            
-            // Auto-scroll to bottom
-            logArea.scrollTop = logArea.scrollHeight;
-        }
-        
-        // Update status display
-        function updateStatus() {
-            const status = botDetector.getDetectionStatus();
-            statusPanel.innerHTML = `
-                <h2>Detection Status</h2>
-                <div><strong>Session Active:</strong> ${status.sessionActive ? 'Yes' : 'No'}</div>
-                <div><strong>Mouse Events:</strong> ${status.dataPoints.mouseMovements}</div>
-                <div><strong>Keystroke Events:</strong> ${status.dataPoints.keystrokes}</div>
-                <div><strong>Scroll Events:</strong> ${status.dataPoints.scrollEvents}</div>
-                <div><strong>Page Interactions:</strong> ${status.dataPoints.interactions}</div>
-                <div><strong>Activity Time:</strong> ${status.activityTime} seconds</div>
-                <div><strong>Fingerprint Captured:</strong> ${status.fingerprintAvailable ? 'Yes' : 'No'}</div>
-            `;
-        }
-        
-        // Initial status update
-        updateStatus();
-        
-        // Regular status updates
-        setInterval(updateStatus, 2000);
-        
-        // Regular bot detection evaluation
-        setInterval(async function() {
-            try {
-                const result = await botDetector.evaluateSession();
-                
-                let logType = 'info';
-                if (result.status === 'likely_bot') {
-                    logType = 'bot';
-                } else if (result.status === 'likely_human') {
-                    logType = 'human';
-                } else if (result.status === 'verification_recommended') {
-                    logType = 'warning';
-                }
-                
-                // Only log if we have a meaningful result
-                if (result.status !== 'insufficient_data') {
-                    const confidence = Math.round(result.confidence * 100);
-                    addLogEntry(`Status: ${result.status} (${confidence}% confidence) - ${result.message}`, logType);
-                }
-            } catch (error) {
-                addLogEntry(`Error: ${error.message}`, 'bot');
-            }
-        }, 5000);
-        
-        // Submit button event
-        submitBtn.addEventListener('click', function() {
-            const text = textArea.value.trim();
-            if (text) {
-                addLogEntry(`User submitted text: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`, 'human');
-                textArea.value = '';
-            }
-        });
-        
-        // Initial log entry
-        addLogEntry('Bot detection system initialized');
+    <h3>3. Scroll Behavior Test</h3>
+    <div style="height: 150px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px;">
+      <p>Scroll through this content at a natural pace.</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.</p>
+    </div>
+    
+    <h3>4. Form Interaction Test</h3>
+    <form id="test-form" onsubmit="event.preventDefault(); logFormSubmission();">
+      <input type="text" placeholder="Name" required>
+      <input type="email" placeholder="Email" required>
+      <textarea placeholder="Message" required></textarea>
+      <button type="submit">Submit Form</button>
+    </form>
+  </div>
+  
+  <div class="test-section">
+    <h2>Detection Log</h2>
+    <div id="detection-log"></div>
+  </div>
+  
+  <script src="botDetection.js"></script>
+  <script>
+    // Initialize bot detection
+    const botDetection = initBotDetection();
+    
+    // UI interaction logic
+    document.getElementById('run-detection').addEventListener('click', async () => {
+      const result = await botDetection.detectBot();
+      updateDetectionStatus(result);
     });
-    </script>
+    
+    function updateDetectionStatus(result) {
+      const statusElement = document.getElementById('detection-status');
+      const detailsElement = document.getElementById('detection-details');
+      const lastCheckedElement = document.getElementById('last-checked');
+      
+      statusElement.textContent = result.isHuman ? 'Human' : 'Bot';
+      statusElement.className = result.isHuman ? 'status human' : 'status bot';
+      
+      lastCheckedElement.textContent = new Date().toLocaleTimeString();
+      
+      let detailsHtml = '<h4>Detection Details:</h4><ul>';
+      for (const [key, value] of Object.entries(result.details)) {
+        detailsHtml += `<li>${key}: ${value}</li>`;
+      }
+      detailsHtml += '</ul>';
+      
+      detailsElement.innerHTML = detailsHtml;
+      
+      // Log the detection
+      logDetection(result);
+    }
+    
+    function logDetection(result) {
+      const logElement = document.getElementById('detection-log');
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `
+        <p><strong>[${new Date().toLocaleTimeString()}]</strong> Detection result: <span class="${result.isHuman ? 'human' : 'bot'}">${result.isHuman ? 'Human' : 'Bot'}</span></p>
+      `;
+      logElement.prepend(logEntry);
+    }
+    
+    function logFormSubmission() {
+      const logElement = document.getElementById('detection-log');
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `
+        <p><strong>[${new Date().toLocaleTimeString()}]</strong> Form submitted</p>
+      `;
+      logElement.prepend(logEntry);
+    }
+    
+    // Run detection after page is fully loaded and some interaction
+    window.addEventListener('load', () => {
+      setTimeout(async () => {
+        const result = await botDetection.detectBot();
+        updateDetectionStatus(result);
+      }, 5000);
+    });
+  </script>
 </body>
 </html>
