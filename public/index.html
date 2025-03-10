@@ -203,22 +203,29 @@ function updateDetectionStatus(result) {
         logElement.prepend(logEntry);
     }
     
-    function logFormSubmission() {
-        const logElement = document.getElementById('detection-log');
-        const logEntry = document.createElement('div');
-        logEntry.innerHTML = `
-            <p><strong>[${new Date().toLocaleTimeString()}]</strong> Form submitted</p>
+        window.addEventListener('load', () => {
+        const statusElement = document.getElementById('detection-status');
+        const detailsElement = document.getElementById('detection-details');
+        
+        statusElement.textContent = 'Waiting for interaction';
+        detailsElement.innerHTML = `
+            <h4>Detection Details:</h4>
+            <ul>
+                <li>Status: Please interact with the page</li>
+                <li>Mouse Movement: No data</li>
+                <li>Scroll Behavior: No data</li>
+                <li>Keystroke Pattern: No data</li>
+            </ul>
         `;
-        logElement.prepend(logEntry);
-    }
-    
-    // Run detection after page is fully loaded and some interaction
-    window.addEventListener('load', () => {
-        setTimeout(async () => {
-            const result = await botDetector.evaluateSession();
-            updateDetectionStatus(result);
-        }, 5000);
     });
+    
+  window.addEventListener('load', () => {
+    setTimeout(async () => {
+        const result = await botDetector.evaluateSession();
+        updateDetectionStatus(result);
+    }, 5000);
+}); 
+    f
   </script>
 </body>
 </html>
