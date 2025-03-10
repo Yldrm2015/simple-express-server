@@ -10,6 +10,12 @@ class BotDetectionSystem {
         tcpFingerprintingStrict: true,
         checkConnectionSpeed: true
       },
+  
+            // Time and User Configuration
+            timeAndUserConfig: {
+                currentDateTime: "2025-03-10 13:47:38",
+                userLogin: "Yldrm2015"
+            },
       
        // Time and User Configuration
             timeAndUserConfig: {
