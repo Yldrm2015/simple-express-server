@@ -138,31 +138,57 @@
         updateDetectionStatus(result);
     });
     
-    function updateDetectionStatus(result) {
-        const statusElement = document.getElementById('detection-status');
-        const detailsElement = document.getElementById('detection-details');
-        const lastCheckedElement = document.getElementById('last-checked');
-        
-        statusElement.textContent = result.status === 'likely_human' ? 'Human' : 'Bot';
-        statusElement.className = result.status === 'likely_human' ? 'status human' : 'status bot';
-        
+function updateDetectionStatus(result) {
+    const statusElement = document.getElementById('detection-status');
+    const detailsElement = document.getElementById('detection-details');
+    const lastCheckedElement = document.getElementById('last-checked');
+    
+    // Minimum etkileşim kontrolü
+    const hasMouseData = result.signals?.behavioral?.mouseMovements?.length > 10;
+    const hasScrollData = result.signals?.behavioral?.scrollEvents?.length > 5;
+    const hasKeystrokeData = result.signals?.behavioral?.keystrokePatterns?.length > 5;
+    
+    // Eğer yeterli veri yoksa "Insufficient Data" göster
+    if (!hasMouseData && !hasScrollData && !hasKeystrokeData) {
+        statusElement.textContent = 'Insufficient Data';
+        statusElement.className = 'status';
         lastCheckedElement.textContent = new Date().toLocaleTimeString();
         
         let detailsHtml = '<h4>Detection Details:</h4><ul>';
-        detailsHtml += `<li>Status: ${result.status}</li>`;
-        detailsHtml += `<li>Confidence: ${(result.confidence * 100).toFixed(2)}%</li>`;
-        
-        if (result.signals) {
-            detailsHtml += `<li>Mouse Movement: ${result.signals.behavioral.mouseMovementNatural ? 'Natural' : 'Suspicious'}</li>`;
-            detailsHtml += `<li>Scroll Behavior: ${result.signals.behavioral.scrollBehaviorNatural ? 'Natural' : 'Suspicious'}</li>`;
-            detailsHtml += `<li>Keystroke Pattern: ${result.signals.behavioral.keystrokePatternNatural ? 'Natural' : 'Suspicious'}</li>`;
-        }
-        
+        detailsHtml += '<li>Status: Waiting for user interaction</li>';
+        detailsHtml += '<li>Confidence: N/A</li>';
+        detailsHtml += `<li>Mouse Movement: ${hasMouseData ? 'Analyzing' : 'No data'}</li>`;
+        detailsHtml += `<li>Scroll Behavior: ${hasScrollData ? 'Analyzing' : 'No data'}</li>`;
+        detailsHtml += `<li>Keystroke Pattern: ${hasKeystrokeData ? 'Analyzing' : 'No data'}</li>`;
         detailsHtml += '</ul>';
         detailsElement.innerHTML = detailsHtml;
-        
-        logDetection(result);
+        return;
     }
+    
+    // Yeterli veri varsa normal analizi göster
+    statusElement.textContent = result.status === 'likely_human' ? 'Human' : 'Bot';
+    statusElement.className = result.status === 'likely_human' ? 'status human' : 'status bot';
+    
+    lastCheckedElement.textContent = new Date().toLocaleTimeString();
+    
+    let detailsHtml = '<h4>Detection Details:</h4><ul>';
+    detailsHtml += `<li>Status: ${result.status}</li>`;
+    detailsHtml += `<li>Confidence: ${(result.confidence * 100).toFixed(2)}%</li>`;
+    
+    if (result.signals) {
+        detailsHtml += `<li>Mouse Movement: ${hasMouseData ? 
+            (result.signals.behavioral.mouseMovementNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
+        detailsHtml += `<li>Scroll Behavior: ${hasScrollData ? 
+            (result.signals.behavioral.scrollBehaviorNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
+        detailsHtml += `<li>Keystroke Pattern: ${hasKeystrokeData ? 
+            (result.signals.behavioral.keystrokePatternNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
+    }
+    
+    detailsHtml += '</ul>';
+    detailsElement.innerHTML = detailsHtml;
+    
+    logDetection(result);
+}
     
     function logDetection(result) {
         const logElement = document.getElementById('detection-log');
