@@ -11,6 +11,14 @@ class BotDetectionSystem {
         checkConnectionSpeed: true
       },
       
+       // Time and User Configuration
+            timeAndUserConfig: {
+                currentDateTime: new Date().toISOString()
+                    .replace('T', ' ')
+                    .slice(0, 19),
+                userLogin: "Yldrm2015"
+            },
+      
       // Behavioral thresholds for human-like interaction
       behavioralThresholds: {
         mouseMovementNaturalness: 0.6,
