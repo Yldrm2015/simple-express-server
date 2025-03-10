@@ -59,10 +59,61 @@ class BotDetectionSystem {
       this.trackScrollBehavior(e);
     });
 
-    // Keystroke analysis
-    document.addEventListener('keydown', (e) => {
-      this.analyzeKeystrokes(e);
-    });
+ // Keystroke analysis
+  document.addEventListener('keydown', (e) => {
+    this.analyzeKeystrokes(e);
+  });
+  
+  trackMouseMovement(event) {
+    const timestamp = Date.now();
+    const movement = {
+      x: event.clientX,
+      y: event.clientY,
+      timestamp
+    };
+
+     // Analyze mouse movement naturalness
+    return this.assessMouseMovementNaturalness();
+  }
+
+  trackScrollBehavior(event) {
+    const timestamp = Date.now();
+    const scrollData = {
+      scrollY: window.scrollY,
+      timestamp
+    };
+    
+    // Limit array size
+    if (this.behavioralData.scrollEvents.length > 50) {
+      this.behavioralData.scrollEvents.shift();
+    }
+    
+    this.behavioralData.scrollEvents.push(scrollData);
+    this.behavioralData.lastActivity = timestamp;
+    
+    return this.assessScrollBehavior();
+  }
+
+  analyzeKeystrokes(event) {
+    const timestamp = Date.now();
+    const keystroke = {
+      key: event.key,
+      keyCode: event.keyCode,
+      timestamp,
+      timeSinceLast: this.behavioralData.keystrokePatterns.length > 0 ? 
+        timestamp - this.behavioralData.keystrokePatterns[this.behavioralData.keystrokePatterns.length - 1].timestamp : 0
+    };
+    
+    // Limit array size
+    if (this.behavioralData.keystrokePatterns.length > 50) {
+      this.behavioralData.keystrokePatterns.shift();
+    }
+    
+    this.behavioralData.keystrokePatterns.push(keystroke);
+    this.behavioralData.lastActivity = timestamp;
+    
+    return this.assessKeystrokeNaturalness();
+  }
 
     // Page focus and interaction tracking
     document.addEventListener('visibilitychange', () => {
