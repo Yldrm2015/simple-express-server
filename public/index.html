@@ -124,7 +124,8 @@
   <script src="botDetection.js"></script>
   <script>
     // Initialize bot detection
-    const botDetection = initBotDetection();
+const botDetector = new BotDetectionSystem();
+
     
     // UI interaction logic
     document.getElementById('run-detection').addEventListener('click', async () => {
