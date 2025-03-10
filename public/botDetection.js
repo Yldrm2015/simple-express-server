@@ -361,9 +361,10 @@ class BotDetectionSystem {
       ctx.fill();
       
      // cleanup
-  document.body.removeChild(h);
-    
-  return detected;
+// cleanup
+document.body.removeChild(h);
+
+return detected;
 }
 
 detectPlugins() {
