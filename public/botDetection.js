@@ -284,87 +284,241 @@ class BotDetectionSystem {
     return this.behavioralData.copyPasteCount <= this.config.behavioralThresholds.copyPasteCount;
   }
 
-  // Fingerprinting Mechanisms
-  initializeFingerprinting() {
-    this.fingerprintData = {
-      webgl: this.captureWebGLFingerprint(),
-      canvas: this.captureCanvasFingerprint(),
-      audio: this.captureAudioFingerprint(),
-      systemResources: this.captureSystemResources(),
-      screenMetrics: this.captureScreenMetrics(),
-      fonts: this.detectFonts(),
-      plugins: this.detectPlugins()
+// Parmak İzi Mekanizmaları
+initializeFingerprinting() {
+  this.fingerprintData = {
+    webgl: this.captureWebGLFingerprint(),
+    canvas: this.captureCanvasFingerprint(),
+    audio: this.captureAudioFingerprint(),
+    systemResources: this.captureSystemResources(),
+    screenMetrics: this.captureScreenMetrics(),
+    fonts: this.detectFonts(),
+    plugins: this.detectPlugins()
+  };
+} 
+
+captureWebGLFingerprint() {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return null;
+    
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!debugInfo) return null;
+    
+    // Gather more detailed WebGL data
+    return {
+      vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+      renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+      version: gl.getParameter(gl.VERSION),
+      shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+      antialiasing: gl.getContextAttributes().antialias,
+      extensions: gl.getSupportedExtensions(),
+      maxAnisotropy: this.getMaxAnisotropy(gl)
     };
+  } catch (error) {
+    console.error('WebGL fingerprinting failed:', error);
+    return null;
   }
+}
 
-  captureWebGLFingerprint() {
-    try {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (!gl) return null;
+getMaxAnisotropy(gl) {
+  try {
+    const ext = gl.getExtension('EXT_texture_filter_anisotropic') || 
+              gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic') || 
+              gl.getExtension('MOZ_EXT_texture_filter_anisotropic');
+    return ext ? gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+captureCanvasFingerprint() {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 240;
+    canvas.height = 140;
+    const ctx = canvas.getContext('2d');
+    
+    // Text with different characteristics
+    const txt = 'BotDetection,Canvas.Fingerprint';
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#f60";
+    ctx.fillRect(125, 1, 62, 20);
+    
+    // Add some complexity to the canvas
+    ctx.fillStyle = "#069";
+    ctx.font = "15px Arial";
+    ctx.fillText(txt, 2, 15);
+    ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+    ctx.font = "16px Georgia";
+    ctx.fillText(txt, 4, 45);
+    
+    // Draw shapes
+    ctx.fillRect(125, 50, 50, 30);
+    ctx.beginPath();
+    ctx.arc(50, 70, 25, 0, Math.PI * 2, true);
+    ctx.fill();
+    
+    // Get the base64 representation
+    return {
+      dataURL: canvas.toDataURL(),
+      pngDataURL: canvas.toDataURL('image/png'),
+      webpDataURL: canvas.toDataURL('image/webp')
+    };
+  } catch (error) {
+    console.error('Canvas fingerprinting failed:', error);
+    return null;
+  }
+}
+
+captureAudioFingerprint() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    
+    const audioCtx = new AudioContext();
+    const analyser = audioCtx.createAnalyser();
+    const oscillator = audioCtx.createOscillator();
+    const dynamicsCompressor = audioCtx.createDynamicsCompressor();
+    
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(10000, audioCtx.currentTime);
+    
+    dynamicsCompressor.threshold.setValueAtTime(-50, audioCtx.currentTime);
+    dynamicsCompressor.knee.setValueAtTime(40, audioCtx.currentTime);
+    dynamicsCompressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+    dynamicsCompressor.attack.setValueAtTime(0, audioCtx.currentTime);
+    dynamicsCompressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+    
+    oscillator.connect(dynamicsCompressor);
+    dynamicsCompressor.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    
+    oscillator.start(0);
+    
+    // Sample the audio buffer
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteTimeDomainData(dataArray);
+    
+    // Do cleanup
+    oscillator.stop(0);
+    audioCtx.close();
+    
+    // Get a summary hash from the data
+    const sum = dataArray.reduce((a, b) => a + b, 0);
+    return {
+      hash: sum.toString(16),
+      sampleRate: audioCtx.sampleRate
+    };
+  } catch (error) {
+    console.error('Audio fingerprinting failed:', error);
+    return null;
+  }
+}
+
+captureSystemResources() {
+  try {
+    // Memory info
+    const memoryInfo = performance && performance.memory ? {
+      jsHeapSizeLimit: performance.memory.jsHeapSizeLimit,
+      totalJSHeapSize: performance.memory.totalJSHeapSize,
+      usedJSHeapSize: performance.memory.usedJSHeapSize
+    } : null;
+    
+    // CPU info - indirect
+    const start = performance.now();
+    let result = 0;
+    for (let i = 0; i < 1000000; i++) {
+      result += Math.sqrt(i);
+    }
+    const end = performance.now();
+    const cpuPerformance = end - start;
+    
+    return {
+      memoryInfo,
+      cpuPerformance,
+      hardwareConcurrency: navigator.hardwareConcurrency || null,
+      deviceMemory: navigator.deviceMemory || null
+    };
+  } catch (error) {
+    console.error('System resources fingerprinting failed:', error);
+    return null;
+  }
+}
+
+captureScreenMetrics() {
+  return {
+    width: window.screen.width,
+    height: window.screen.height,
+    availWidth: window.screen.availWidth,
+    availHeight: window.screen.availHeight,
+    colorDepth: window.screen.colorDepth,
+    pixelDepth: window.screen.pixelDepth,
+    devicePixelRatio: window.devicePixelRatio || 1,
+    orientation: window.screen.orientation ? window.screen.orientation.type : null
+  };
+}
+
+detectFonts() {
+  // A simple font detection mechanism
+  const baseFonts = ['monospace', 'sans-serif', 'serif'];
+  const fontList = [
+    'Arial', 'Arial Black', 'Arial Narrow', 'Calibri', 'Cambria', 'Cambria Math',
+    'Comic Sans MS', 'Courier', 'Courier New', 'Georgia', 'Helvetica', 'Impact',
+    'Lucida Console', 'Lucida Sans Unicode', 'Microsoft Sans Serif', 'Palatino Linotype',
+    'Segoe UI', 'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana'
+  ];
+  
+  const testString = 'mmmmmmmmmmlli';
+  const testSize = '72px';
+  const h = document.createElement('div');
+  
+  h.style.position = 'absolute';
+  h.style.left = '-9999px';
+  h.style.visibility = 'hidden';
+  
+  const baseFontWidths = {};
+  const detected = [];
+
+  // Add the test div to the DOM
+  document.body.appendChild(h);
+  
+  // Get width with base fonts
+  for (let base of baseFonts) {
+    h.style.fontFamily = base;
+    h.style.fontSize = testSize;
+    h.innerHTML = testString;
+    baseFontWidths[base] = h.clientWidth;
+  }
+  
+  // Check for each font
+  for (let font of fontList) {
+    let fontDetected = false;
+    
+    // Try with each base font
+    for (let base of baseFonts) {
+      h.style.fontFamily = `'${font}', ${base}`;
+      h.style.fontSize = testSize;
+      h.innerHTML = testString;
       
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-      if (!debugInfo) return null;
-      
-      // Gather more detailed WebGL data
-      return {
-        vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-        renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
-        version: gl.getParameter(gl.VERSION),
-        shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
-        antialiasing: gl.getContextAttributes().antialias,
-        extensions: gl.getSupportedExtensions(),
-        maxAnisotropy: this.getMaxAnisotropy(gl)
-      };
-    } catch (error) {
-      console.error('WebGL fingerprinting failed:', error);
-      return null;
+      // If width is different than base font, the font is available
+      if (h.clientWidth !== baseFontWidths[base]) {
+        fontDetected = true;
+        break;
+      }
+    }
+    
+    if (fontDetected) {
+      detected.push(font);
     }
   }
-
-  getMaxAnisotropy(gl) {
-    try {
-      const ext = gl.getExtension('EXT_texture_filter_anisotropic') || 
-                gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic') || 
-                gl.getExtension('MOZ_EXT_texture_filter_anisotropic');
-      return ext ? gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 0;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  captureCanvasFingerprint() {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 240;
-      canvas.height = 140;
-      const ctx = canvas.getContext('2d');
-      
-      // Text with different characteristics
-      const txt = 'BotDetection,Canvas.Fingerprint';
-      ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "#f60";
-      ctx.fillRect(125, 1, 62, 20);
-      
-      // Add some complexity to the canvas
-      ctx.fillStyle = "#069";
-      ctx.font = "15px Arial";
-      ctx.fillText(txt, 2, 15);
-      ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-      ctx.font = "16px Georgia";
-      ctx.fillText(txt, 4, 45);
-      
-      // Draw shapes
-      ctx.fillRect(125, 50, 50, 30);
-      ctx.beginPath();
-      ctx.arc(50, 70, 25, 0, Math.PI * 2, true);
-      ctx.fill();
-      
-     // cleanup
-// cleanup
-document.body.removeChild(h);
-
-return detected;
+  
+  // Cleanup
+  document.body.removeChild(h);
+  
+  return detected;
 }
 
 detectPlugins() {
@@ -663,7 +817,7 @@ generateChallenge() {
     id: Math.random().toString(36).substr(2, 9),
     timestamp: Date.now()
   };
-  
+
   if (challenge.type === 'captcha') {
     // Generate a simple text-based CAPTCHA
     const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -681,20 +835,20 @@ generateChallenge() {
     challenge.puzzle = `${a} ${operation} ${b}`;
     challenge.answer = operation === '+' ? a + b : a - b;
   }
-  
+
   return challenge;
 }
 
 verifyChallenge(challenge, response) {
   if (!challenge || !response) return false;
-  
+
   // Verify the challenge response
   if (challenge.type === 'captcha') {
     return response.toLowerCase() === challenge.captchaText.toLowerCase();
   } else if (challenge.type === 'puzzle') {
     return parseInt(response) === challenge.answer;
   }
-  
+
   return false;
 }
 
