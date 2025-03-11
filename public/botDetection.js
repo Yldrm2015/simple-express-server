@@ -878,6 +878,36 @@ checkRateLimit() {
       };
     }
   }
+  
+// Request Headers Helper Method
+getRequestHeaders() {
+    return {
+        'user-agent': navigator.userAgent,
+        'accept-language': navigator.language,
+        'dnt': navigator.doNotTrack,
+    };
+}
+
+// Client IP Helper Method
+getClientIP() {
+    return '127.0.0.1';
+}
+
+// Request Timing Helper Method
+checkRequestTiming() {
+    return {
+        abnormal: false,
+        timing: Date.now()
+    };
+}
+
+// Session Validation Helper Method
+validateSession() {
+    return {
+        valid: true,
+        timestamp: Date.now()
+    };
+}
 
   detectConnectionType() {
     try {
@@ -1301,10 +1331,9 @@ getDetectionStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the bot detection system
     const botDetector = new BotDetectionSystem({
-        // Custom configuration if needed
         behavioralThresholds: {
-            mouseMovementNaturalness: 0.5, // More lenient
-            pageFocusRatio: 0.3 // More lenient
+            mouseMovementNaturalness: 0.5,
+            pageFocusRatio: 0.3
         }
     });
 
@@ -1323,36 +1352,7 @@ document.addEventListener('DOMContentLoaded', function() {
     statusElement.style.zIndex = '9999';
     document.body.appendChild(statusElement);
 
-    // Update status display function
-    async function updateStatus() {
-        const result = await botDetector.detectBot();
-        const currentTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
-        
-        let statusHtml = `
-            <div><strong>Bot Detection Status</strong></div>
-            <div>Current Date and Time (UTC): ${currentTime}</div>
-            <div>Current User: ${botDetector.config.timeAndUserConfig.userLogin}</div>
-            <div>Status: ${result.isBot ? 'Likely Bot' : 'Likely Human'}</div>
-            <div>Confidence: ${result.botProbability ? result.botProbability.toFixed(2) + '%' : 'N/A'}</div>
-        `;
-
-        if (result.reasons && result.reasons.length > 0) {
-            statusHtml += `<div>Reasons:</div>`;
-            result.reasons.forEach(reason => {
-                statusHtml += `<div>- ${reason}</div>`;
-            });
-        }
-
-        statusElement.innerHTML = statusHtml;
-    }
-
-    // Initial status update
-    updateStatus();
-
-    // Update status every 10 seconds
-    setInterval(updateStatus, 10000);
-
-    // Add manual check button
+    // Create the check button
     const checkButton = document.createElement('button');
     checkButton.innerHTML = 'Check Now';
     checkButton.style.position = 'fixed';
@@ -1366,52 +1366,67 @@ document.addEventListener('DOMContentLoaded', function() {
     checkButton.style.cursor = 'pointer';
     document.body.appendChild(checkButton);
 
+    // Function to update status display
+    async function updateStatus() {
+        try {
+            const result = await botDetector.detectBot();
+            const status = botDetector.getDetectionStatus();
+            const currentTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+            
+            let statusHtml = `
+                <div><strong>Bot Detection Status</strong></div>
+                <div>Current Date and Time (UTC): ${currentTime}</div>
+                <div>Current User: ${botDetector.config.timeAndUserConfig.userLogin}</div>
+                <div>Status: ${result.isBot ? 'Likely Bot' : 'Likely Human'}</div>
+                <div>Confidence: ${result.botProbability ? result.botProbability.toFixed(2) + '%' : 'N/A'}</div>
+                <div>Mouse events: ${status.dataPoints.mouseMovements}</div>
+                <div>Key events: ${status.dataPoints.keystrokes}</div>
+                <div>Scroll events: ${status.dataPoints.scrollEvents}</div>
+                <div>Activity time: ${status.activityTime}s</div>
+            `;
+
+            if (result.signals) {
+                statusHtml += `
+                    <div><strong>Behavioral Signals:</strong></div>
+                    <div>Mouse Movement: ${result.signals.behavioral.mouseMovementNatural ? 'Natural' : 'Suspicious'}</div>
+                    <div>Scroll Behavior: ${result.signals.behavioral.scrollBehaviorNatural ? 'Natural' : 'Suspicious'}</div>
+                    <div>Keystroke Pattern: ${result.signals.behavioral.keystrokePatternNatural ? 'Natural' : 'Suspicious'}</div>
+                `;
+            }
+
+            if (result.reasons && result.reasons.length > 0) {
+                statusHtml += `<div><strong>Reasons:</strong></div>`;
+                result.reasons.forEach(reason => {
+                    statusHtml += `<div>- ${reason}</div>`;
+                });
+            }
+
+            statusElement.innerHTML = statusHtml;
+        } catch (error) {
+            console.error('Error updating status:', error);
+            statusElement.innerHTML = `
+                <div><strong>Bot Detection Status</strong></div>
+                <div>Error: ${error.message}</div>
+            `;
+        }
+    }
+
+    // Initial status update
+    updateStatus();
+
+    // Update status every 10 seconds
+    setInterval(updateStatus, 10000);
+
+    // Add click event to check button
     checkButton.addEventListener('click', updateStatus);
-});
-  // Initialize the bot detection system
-  const botDetector = new BotDetectionSystem({
-    // Custom configuration if needed
-    behavioralThresholds: {
-      mouseMovementNaturalness: 0.5, // More lenient
-      pageFocusRatio: 0.3 // More lenient
-    }
-  });
-  
-  // Periodically evaluate session
-  setInterval(async function() {
-    const result = await botDetector.evaluateSession();
-    console.log('Bot detection status:', result);
-    
-    // If it's likely a bot, you might want to take action
-    if (result.status === 'likely_bot') {
-      console.warn('Bot detected with confidence:', result.confidence);
-      // Implement your action here (log event, show CAPTCHA, etc.)
-    }
-  }, 10000); // Check every 10 seconds
-  
-  // Add status display element if desired
-  const statusElement = document.createElement('div');
-  statusElement.style.position = 'fixed';
-  statusElement.style.bottom = '10px';
-  statusElement.style.right = '10px';
-  statusElement.style.padding = '10px';
-  statusElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-  statusElement.style.color = 'white';
-  statusElement.style.borderRadius = '5px';
-  statusElement.style.fontSize = '12px';
-  statusElement.style.fontFamily = 'monospace';
-  statusElement.style.zIndex = '9999';
-  document.body.appendChild(statusElement);
-  
-  // Update status display
-  setInterval(function() {
-    const status = botDetector.getDetectionStatus();
-    statusElement.innerHTML = `
-      <div>Bot Detection Status:</div>
-      <div>Mouse events: ${status.dataPoints.mouseMovements}</div>
-      <div>Key events: ${status.dataPoints.keystrokes}</div>
-      <div>Scroll events: ${status.dataPoints.scrollEvents}</div>
-      <div>Activity time: ${status.activityTime}s</div>
-    `;
-  }, 2000); // Update every 2 seconds
+
+    // Log evaluation results
+    setInterval(async function() {
+        const result = await botDetector.evaluateSession();
+        console.log('Bot detection evaluation:', result);
+        
+        if (result.status === 'likely_bot') {
+            console.warn('Bot detected with confidence:', result.confidence);
+        }
+    }, 10000);
 });
