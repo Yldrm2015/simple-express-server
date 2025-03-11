@@ -119,52 +119,45 @@ fallbackMethods: {
 
     // Server-side fallback detection methods
 serverSideBotDetection() {
-  let score = 100;
-  const detectionResults = {
-    headerAnalysis: this.analyzeRequestHeaders(),
-    ipAnalysis: this.analyzeIPAddress(),
-    requestPatterns: this.analyzeRequestPatterns(),
-    sessionAnalysis: this.analyzeSession(),
-    finalScore: 0,
-    isBot: false,
-    reasons: []
-  };
+    let score = 100;
+    const detectionResults = {
+        headerAnalysis: this.analyzeRequestHeaders(),
+        ipAnalysis: this.analyzeIPAddress(),
+        requestPatterns: this.analyzeRequestPatterns(),
+        sessionAnalysis: this.analyzeSession(),
+        botProbability: 0,
+        isBot: false,
+        reasons: []
+    };
 
-  // Process header analysis results
-  if (detectionResults.headerAnalysis.suspicious) {
-    score += this.config.fallbackMethods.headerAnalysis.scoring.suspiciousPatterns;
-    detectionResults.reasons.push('Suspicious headers detected');
-  }
+    // Process all results and collect reasons
+    if (detectionResults.headerAnalysis.suspicious) {
+        score += this.config.fallbackMethods.headerAnalysis.scoring.suspiciousPatterns;
+        detectionResults.reasons.push(...detectionResults.headerAnalysis.reasons);
+    }
 
-  // Process IP analysis results
-  if (detectionResults.ipAnalysis.blacklisted) {
-    score += this.config.fallbackMethods.ipAnalysis.scoring.blacklistedIP;
-    detectionResults.reasons.push('IP blacklisted');
-  }
+    if (detectionResults.ipAnalysis.blacklisted) {
+        score += this.config.fallbackMethods.ipAnalysis.scoring.blacklistedIP;
+        detectionResults.reasons.push(...detectionResults.ipAnalysis.reasons);
+    }
 
-  if (detectionResults.ipAnalysis.vpnDetected) {
-    score += this.config.fallbackMethods.ipAnalysis.scoring.vpnDetected;
-    detectionResults.reasons.push('VPN usage detected');
-  }
+    if (detectionResults.requestPatterns.abnormalTiming) {
+        score += this.config.fallbackMethods.requestPatternAnalysis.scoring.abnormalTiming;
+        detectionResults.reasons.push(...detectionResults.requestPatterns.reasons);
+    }
 
-  // Process request pattern results
-  if (detectionResults.requestPatterns.abnormalTiming) {
-    score += this.config.fallbackMethods.requestPatternAnalysis.scoring.abnormalTiming;
-    detectionResults.reasons.push('Abnormal request timing');
-  }
+    if (detectionResults.sessionAnalysis.inconsistent) {
+        score += this.config.fallbackMethods.sessionTracking.scoring.inconsistentSession;
+        detectionResults.reasons.push(...detectionResults.sessionAnalysis.reasons);
+    }
 
-  // Process session analysis results
-  if (detectionResults.sessionAnalysis.inconsistent) {
-    score += this.config.fallbackMethods.sessionTracking.scoring.inconsistentSession;
-    detectionResults.reasons.push('Inconsistent session detected');
-  }
+    // Calculate final probability
+    detectionResults.botProbability = 100 - Math.max(0, Math.min(100, score));
+    detectionResults.isBot = detectionResults.botProbability > 50;
 
-  detectionResults.finalScore = Math.max(0, Math.min(100, score));
-  detectionResults.isBot = detectionResults.finalScore < 60;
-
-  return detectionResults;
+    return detectionResults;
 }
-
+    
 analyzeRequestHeaders() {
   const headers = this.getRequestHeaders();
   let suspicious = false;
@@ -1306,6 +1299,75 @@ getDetectionStatus() {
 
 // Example initialization for index.html
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the bot detection system
+    const botDetector = new BotDetectionSystem({
+        // Custom configuration if needed
+        behavioralThresholds: {
+            mouseMovementNaturalness: 0.5, // More lenient
+            pageFocusRatio: 0.3 // More lenient
+        }
+    });
+
+    // Create status display element
+    const statusElement = document.createElement('div');
+    statusElement.id = 'botDetectionStatus';
+    statusElement.style.position = 'fixed';
+    statusElement.style.bottom = '10px';
+    statusElement.style.right = '10px';
+    statusElement.style.padding = '15px';
+    statusElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    statusElement.style.color = 'white';
+    statusElement.style.borderRadius = '5px';
+    statusElement.style.fontSize = '14px';
+    statusElement.style.fontFamily = 'monospace';
+    statusElement.style.zIndex = '9999';
+    document.body.appendChild(statusElement);
+
+    // Update status display function
+    async function updateStatus() {
+        const result = await botDetector.detectBot();
+        const currentTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+        
+        let statusHtml = `
+            <div><strong>Bot Detection Status</strong></div>
+            <div>Current Date and Time (UTC): ${currentTime}</div>
+            <div>Current User: ${botDetector.config.timeAndUserConfig.userLogin}</div>
+            <div>Status: ${result.isBot ? 'Likely Bot' : 'Likely Human'}</div>
+            <div>Confidence: ${result.botProbability ? result.botProbability.toFixed(2) + '%' : 'N/A'}</div>
+        `;
+
+        if (result.reasons && result.reasons.length > 0) {
+            statusHtml += `<div>Reasons:</div>`;
+            result.reasons.forEach(reason => {
+                statusHtml += `<div>- ${reason}</div>`;
+            });
+        }
+
+        statusElement.innerHTML = statusHtml;
+    }
+
+    // Initial status update
+    updateStatus();
+
+    // Update status every 10 seconds
+    setInterval(updateStatus, 10000);
+
+    // Add manual check button
+    const checkButton = document.createElement('button');
+    checkButton.innerHTML = 'Check Now';
+    checkButton.style.position = 'fixed';
+    checkButton.style.bottom = '10px';
+    checkButton.style.right = '250px';
+    checkButton.style.padding = '10px 20px';
+    checkButton.style.backgroundColor = '#4CAF50';
+    checkButton.style.color = 'white';
+    checkButton.style.border = 'none';
+    checkButton.style.borderRadius = '5px';
+    checkButton.style.cursor = 'pointer';
+    document.body.appendChild(checkButton);
+
+    checkButton.addEventListener('click', updateStatus);
+});
   // Initialize the bot detection system
   const botDetector = new BotDetectionSystem({
     // Custom configuration if needed
