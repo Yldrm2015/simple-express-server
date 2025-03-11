@@ -36,14 +36,273 @@ class BotDetectionSystem {
       },
       
       // Fallback mechanisms for when JavaScript is disabled
-      fallbackMethods: {
-        headerAnalysis: true,
-        ipBlacklist: true,
-        captchaVerification: true,
-        sessionTracking: true
-      },
-      ...config
+fallbackMethods: {
+  headerAnalysis: {
+    enabled: true,
+    strictMode: true,
+    patterns: {
+      knownBots: [
+        'bot', 'crawler', 'spider', 'wget', 'curl',
+        'postman', 'python-requests', 'ruby'
+      ],
+      suspiciousHeaders: [
+        'x-requested-with', 'x-forwarded-for',
+        'via', 'forwarded', 'true-client-ip'
+      ],
+      browserFingerprints: {
+        accept: ['text/html', 'application/xhtml+xml'],
+        acceptLanguage: true,
+        acceptEncoding: true,
+        connectionType: ['keep-alive', 'close']
+      }
+    },
+    scoring: {
+      inconsistentHeaders: -20,
+      missingHeaders: -15,
+      suspiciousPatterns: -25,
+      knownBotSignature: -100
+    }
+  },
+  ipAnalysis: {
+    enabled: true,
+    checkReputation: true,
+    rateLimiting: {
+      windowMs: 900000, // 15 minutes
+      maxRequests: 100,
+      blockDuration: 3600000 // 1 hour
+    },
+    geolocation: {
+      enabled: true,
+      suspiciousCountries: [''], // Add suspicious country codes
+      vpnDetection: true
+    },
+    scoring: {
+      blacklistedIP: -100,
+      suspiciousCountry: -30,
+      vpnDetected: -40,
+      rateLimitExceeded: -50
+    }
+  },
+  requestPatternAnalysis: {
+    enabled: true,
+    patterns: {
+      timingAnalysis: true,
+      requestOrder: true,
+      resourceAccess: true
+    },
+    thresholds: {
+      minRequestInterval: 100, // milliseconds
+      maxConcurrent: 10,
+      maxSessionRequests: 1000
+    },
+    scoring: {
+      abnormalTiming: -20,
+      suspiciousOrder: -25,
+      resourceAbuse: -30
+    }
+  },
+  sessionTracking: {
+    enabled: true,
+    secureCookie: true,
+    httpOnly: true,
+    sameSite: 'strict',
+    sessionFeatures: {
+      fingerprint: true,
+      ipBinding: true,
+      geoConsistency: true,
+      deviceConsistency: true
+    },
+    scoring: {
+      inconsistentSession: -40,
+      invalidFingerprint: -30,
+      locationMismatch: -35
+    }
+  }
+},
     };
+
+    // Server-side fallback detection methods
+serverSideBotDetection() {
+  let score = 100;
+  const detectionResults = {
+    headerAnalysis: this.analyzeRequestHeaders(),
+    ipAnalysis: this.analyzeIPAddress(),
+    requestPatterns: this.analyzeRequestPatterns(),
+    sessionAnalysis: this.analyzeSession(),
+    finalScore: 0,
+    isBot: false,
+    reasons: []
+  };
+
+  // Process header analysis results
+  if (detectionResults.headerAnalysis.suspicious) {
+    score += this.config.fallbackMethods.headerAnalysis.scoring.suspiciousPatterns;
+    detectionResults.reasons.push('Suspicious headers detected');
+  }
+
+  // Process IP analysis results
+  if (detectionResults.ipAnalysis.blacklisted) {
+    score += this.config.fallbackMethods.ipAnalysis.scoring.blacklistedIP;
+    detectionResults.reasons.push('IP blacklisted');
+  }
+
+  if (detectionResults.ipAnalysis.vpnDetected) {
+    score += this.config.fallbackMethods.ipAnalysis.scoring.vpnDetected;
+    detectionResults.reasons.push('VPN usage detected');
+  }
+
+  // Process request pattern results
+  if (detectionResults.requestPatterns.abnormalTiming) {
+    score += this.config.fallbackMethods.requestPatternAnalysis.scoring.abnormalTiming;
+    detectionResults.reasons.push('Abnormal request timing');
+  }
+
+  // Process session analysis results
+  if (detectionResults.sessionAnalysis.inconsistent) {
+    score += this.config.fallbackMethods.sessionTracking.scoring.inconsistentSession;
+    detectionResults.reasons.push('Inconsistent session detected');
+  }
+
+  detectionResults.finalScore = Math.max(0, Math.min(100, score));
+  detectionResults.isBot = detectionResults.finalScore < 60;
+
+  return detectionResults;
+}
+
+analyzeRequestHeaders() {
+  const headers = this.getRequestHeaders();
+  let suspicious = false;
+  let reasons = [];
+
+  // Check for known bot signatures
+  if (this.config.fallbackMethods.headerAnalysis.patterns.knownBots.some(
+    bot => headers['user-agent']?.toLowerCase().includes(bot)
+  )) {
+    suspicious = true;
+    reasons.push('Known bot signature detected');
+  }
+
+  // Check for suspicious headers
+  const suspiciousHeadersPresent = this.config.fallbackMethods.headerAnalysis.patterns.suspiciousHeaders
+    .filter(header => headers[header]);
+  
+  if (suspiciousHeadersPresent.length > 0) {
+    suspicious = true;
+    reasons.push(`Suspicious headers present: ${suspiciousHeadersPresent.join(', ')}`);
+  }
+
+  return { suspicious, reasons };
+}
+
+analyzeIPAddress() {
+  const ipData = {
+    blacklisted: false,
+    vpnDetected: false,
+    reasons: []
+  };
+
+  // IP reputation check implementation
+  if (this.config.fallbackMethods.ipAnalysis.checkReputation) {
+    // Add your IP reputation check logic here
+    // This should interface with your IP reputation database or service
+  }
+
+  // Rate limiting check
+  const rateLimitData = this.checkRateLimit();
+  if (rateLimitData.limited) {
+    ipData.blacklisted = true;
+    ipData.reasons.push('Rate limit exceeded');
+  }
+
+  return ipData;
+}
+
+analyzeRequestPatterns() {
+  const patterns = {
+    abnormalTiming: false,
+    suspiciousOrder: false,
+    reasons: []
+  };
+
+  if (this.config.fallbackMethods.requestPatternAnalysis.patterns.timingAnalysis) {
+    // Implement request timing analysis
+    const timingData = this.checkRequestTiming();
+    patterns.abnormalTiming = timingData.abnormal;
+    if (timingData.abnormal) {
+      patterns.reasons.push('Abnormal request timing detected');
+    }
+  }
+
+  return patterns;
+}
+
+analyzeSession() {
+  const session = {
+    inconsistent: false,
+    reasons: []
+  };
+
+  if (this.config.fallbackMethods.sessionTracking.enabled) {
+    // Implement session consistency checks
+    const sessionData = this.validateSession();
+    session.inconsistent = !sessionData.valid;
+    if (!sessionData.valid) {
+      session.reasons.push('Session validation failed');
+    }
+  }
+
+  return session;
+}
+
+checkRateLimit() {
+  const config = this.config.fallbackMethods.ipAnalysis.rateLimiting;
+  const now = Date.now();
+  const ipKey = this.getClientIP();
+  
+  if (!this._rateLimitData) {
+    this._rateLimitData = new Map();
+  }
+
+  const userData = this._rateLimitData.get(ipKey) || {
+    requests: [],
+    blocked: false,
+    blockExpires: 0
+  };
+
+  // Check if currently blocked
+  if (userData.blocked && now < userData.blockExpires) {
+    return { limited: true, remaining: 0, reset: userData.blockExpires };
+  }
+
+  // Clear expired block
+  if (userData.blocked && now >= userData.blockExpires) {
+    userData.blocked = false;
+    userData.requests = [];
+  }
+
+  // Clean old requests
+  userData.requests = userData.requests.filter(time => 
+    now - time < config.windowMs
+  );
+
+  // Check rate limit
+  if (userData.requests.length >= config.maxRequests) {
+    userData.blocked = true;
+    userData.blockExpires = now + config.blockDuration;
+    this._rateLimitData.set(ipKey, userData);
+    return { limited: true, remaining: 0, reset: userData.blockExpires };
+  }
+
+  // Add new request
+  userData.requests.push(now);
+  this._rateLimitData.set(ipKey, userData);
+
+  return {
+    limited: false,
+    remaining: config.maxRequests - userData.requests.length,
+    reset: now + config.windowMs
+  };
+}
 
     // Initialize detection mechanisms
     this.initializeBehavioralTracking();
@@ -825,7 +1084,13 @@ class BotDetectionSystem {
   // Main Detection Method
   async detectBot() {
     try {
-      // Collect all detection signals
+      // Check if JavaScript is enabled
+      if (typeof window === 'undefined' || !window.localStorage) {
+        // JavaScript is disabled, use server-side detection
+        return this.serverSideBotDetection();
+      }
+
+      // Collect all detection signals (mevcut kodunuz devam ediyor)
       const activityTime = this.behavioralData.pageFocusTime;
       const inactiveTime = Date.now() - this.behavioralData.lastActivity;
       
