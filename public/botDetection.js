@@ -1267,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('blur', function() {
         console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
     });
-});
+
     // Reporting and Analysis Methods
     generateDetectionReport() {
         return {
