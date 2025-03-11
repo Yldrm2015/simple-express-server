@@ -73,18 +73,19 @@
 <body>
   <h1>Bot Detection System Test</h1>
   
-  <div class="test-section">
+<div class="test-section">
     <h2>Bot Detection Status</h2>
-    <p>Current Date and Time (UTC): <span id="current-time">2025-03-10 13:53:27</span></p>
+    <p>Current Date and Time (UTC): <span id="current-time">2025-03-11 06:46:11</span></p>
     <p>Current User: <span id="current-user">Yldrm2015</span></p>
-    <p>Interact with this page naturally to test the bot detection system. The system will analyze your behavior to determine if you're human or a bot.</p>
-    <button id="run-detection">Run Detection Now</button>
+    <p>Current Status: <span id="detection-status" class="status">Not yet checked</span></p>
+    <p>Last Checked: <span id="last-checked">Never</span></p>
     
     <div class="result-section">
-      <p>Current Status: <span id="detection-status" class="status">Not yet checked</span></p>
-      <p>Last Checked: <span id="last-checked">Never</span></p>
-      <div id="detection-details"></div>
+        <div id="detection-details"></div>
     </div>
+    
+    <button id="run-detection">Run Detection Now</button>
+</div>
   </div>
   
   <div class="test-section">
@@ -126,7 +127,12 @@
   <script src="botDetection.js"></script>
   <script>
     // Initialize bot detection
-    const botDetector = new BotDetectionSystem();
+   const botDetector = new BotDetectionSystem({
+    timeAndUserConfig: {
+        currentDateTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+        userLogin: "Yldrm2015"
+    }
+});
 
     // Set current time and user
     document.getElementById('current-time').textContent = botDetector.config.timeAndUserConfig.currentDateTime;
