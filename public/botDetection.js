@@ -3000,27 +3000,46 @@ class BotDetectionSystem {
 
     // Cleanup Method
     async destroy() {
-        try {
-            // Cleanup core system
-            this.cleanupCoreSystem();
+    try {
+        // Remove event listeners
+        document.removeEventListener('mousemove', this.trackMouseMovement);
+        document.removeEventListener('scroll', this.trackScrollBehavior);
+        document.removeEventListener('keydown', this.analyzeKeystrokes);
+        document.removeEventListener('visibilitychange', this.trackPageFocus);
+        document.removeEventListener('click', this.trackInteraction);
+        document.removeEventListener('copy', () => this.behavioralData.copyPasteCount++);
+        document.removeEventListener('paste', () => this.behavioralData.copyPasteCount++);
 
-            // Cleanup integration
-            await this.integration.cleanup();
-
-            return {
-                status: 'success',
-                message: 'System successfully destroyed',
-                timestamp: '2025-03-11 11:39:24',
-                userLogin: 'Yldrm2015'
-            };
-        } catch (error) {
-            console.error(`[2025-03-11 11:39:24] Cleanup error:`, error);
-            return {
-                status: 'error',
-                message: error.message,
-                timestamp: '2025-03-11 11:39:24',
-                userLogin: 'Yldrm2015'
-            };
+        // Clear intervals
+        if (this.focusCheckInterval) {
+            clearInterval(this.focusCheckInterval);
         }
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
+        }
+
+        // Clear data
+        this.behavioralData = null;
+        this.fingerprintData = null;
+        this.networkData = null;
+        this.storageData = null;
+
+        // Cleanup integration
+        await this.integration.cleanup();
+
+        return {
+            status: 'success',
+            message: 'System successfully destroyed',
+            timestamp: '2025-03-11 12:47:18',
+            userLogin: 'Yldrm2015'
+        };
+    } catch (error) {
+        console.error(`[2025-03-11 12:47:18] Cleanup error:`, error);
+        return {
+            status: 'error',
+            message: error.message,
+            timestamp: '2025-03-11 12:47:18',
+            userLogin: 'Yldrm2015'
+        };
     }
 }
