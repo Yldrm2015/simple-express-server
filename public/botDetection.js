@@ -10,10 +10,8 @@ class BotDetectionSystem {
                 checkConnectionSpeed: true
             },
             timeAndUserConfig: {
-                currentDateTime: new Date().toISOString()
-                    .replace('T', ' ')
-                    .slice(0, 19),
-                userLogin: "Yldrm2015",
+                currentDateTime: '2025-03-11 12:33:04',  
+                userLogin: "Yldrm2015",                  
                 lastChecked: null,
                 status: 'Not yet checked'
             },
@@ -1658,9 +1656,10 @@ getMimeTypes() {
 calculateInactiveTime() {
     return Date.now() - this.behavioralData.lastActivity;
 }
+
 // Advanced Analysis Methods
 class AdvancedAnalysis {
-    constructor(timestamp = '2025-03-11 11:31:53', userLogin = 'Yldrm2015') {
+    constructor(timestamp = '2025-03-11 12:43:57', userLogin = 'Yldrm2015') {    // Güncellendi
         this.timestamp = timestamp;
         this.userLogin = userLogin;
         this.analysisResults = {
@@ -1679,8 +1678,8 @@ class AdvancedAnalysis {
                 curves: 0,
                 stops: 0,
                 averageVelocity: 0,
-                timestamp: this.timestamp,
-                userLogin: this.userLogin
+                timestamp: '2025-03-11 12:43:57',    // Güncellendi
+                userLogin: 'Yldrm2015'               // Güncellendi
             };
 
             for (let i = 2; i < movements.length; i++) {
@@ -1866,7 +1865,7 @@ class AdvancedAnalysis {
 
 // Risk Assessment Module
 class RiskAssessment {
-    constructor(timestamp = '2025-03-11 11:31:53', userLogin = 'Yldrm2015') {
+    constructor(timestamp = '2025-03-11 12:42:20', userLogin = 'Yldrm2015') {    // Güncellendi
         this.timestamp = timestamp;
         this.userLogin = userLogin;
         this.riskFactors = {
@@ -1896,9 +1895,10 @@ class RiskAssessment {
                     network: networkRisk,
                     fingerprint: fingerprintRisk
                 },
-                timestamp: this.timestamp,
-                userLogin: this.userLogin
+                timestamp: '2025-03-11 12:42:20',    // Güncellendi
+                userLogin: 'Yldrm2015'               // Güncellendi
             };
+            
         } catch (error) {
             console.error(`[${this.timestamp}] Risk score calculation error:`, error);
             return null;
@@ -2058,8 +2058,8 @@ class RiskAssessment {
 class RealTimeMonitoring {
     constructor() {
         this.monitoringData = {
-            startTime: '2025-03-11 11:33:16',
-            userLogin: 'Yldrm2015',
+            startTime: '2025-03-11 12:38:11',    // Güncellendi
+            userLogin: 'Yldrm2015',              // Güncellendi
             events: [],
             alerts: [],
             status: 'active'
@@ -2074,8 +2074,8 @@ class RealTimeMonitoring {
 
     addEvent(event) {
         try {
-            const timestamp = '2025-03-11 11:33:16';
-            const userLogin = 'Yldrm2015';
+            const timestamp = '2025-03-11 12:38:11';    // Güncellendi
+            const userLogin = 'Yldrm2015';              // Güncellendi
 
             this.monitoringData.events.push({
                 ...event,
@@ -2160,8 +2160,8 @@ class RealTimeMonitoring {
 class ReportingSystem {
     constructor() {
         this.reportData = {
-            timestamp: '2025-03-11 11:34:53',
-            userLogin: 'Yldrm2015',
+            timestamp: '2025-03-11 12:35:33',    // Güncellendi
+            userLogin: 'Yldrm2015',              // Güncellendi
             reports: [],
             statistics: {
                 totalDetections: 0,
@@ -2175,8 +2175,8 @@ class ReportingSystem {
     generateDetailedReport(detectionResult) {
         try {
             const report = {
-                timestamp: '2025-03-11 11:34:53',
-                userLogin: 'Yldrm2015',
+                timestamp: '2025-03-11 12:35:33',    // Güncellendi
+                userLogin: 'Yldrm2015',              // Güncellendi
                 detectionResult: {
                     ...detectionResult,
                     analysisDetails: this.generateAnalysisDetails(detectionResult)
@@ -2341,8 +2341,8 @@ class ReportingSystem {
 class TestSystem {
     constructor() {
         this.testResults = {
-            timestamp: '2025-03-11 11:34:53',
-            userLogin: 'Yldrm2015',
+            timestamp: '2025-03-11 12:41:12',    // Güncellendi
+            userLogin: 'Yldrm2015',              // Güncellendi
             results: [],
             summary: {
                 total: 0,
@@ -2360,21 +2360,22 @@ class TestSystem {
             await this.testPerformance();
             
             return {
-                timestamp: '2025-03-11 11:34:53',
-                userLogin: 'Yldrm2015',
+                timestamp: '2025-03-11 12:41:12',    // Güncellendi
+                userLogin: 'Yldrm2015',              // Güncellendi
                 summary: this.testResults.summary,
                 details: this.testResults.results
             };
         } catch (error) {
-            console.error(`[2025-03-11 11:34:53] Test execution error:`, error);
+            console.error(`[2025-03-11 12:41:12] Test execution error:`, error);  // Güncellendi
             return {
-                timestamp: '2025-03-11 11:34:53',
-                userLogin: 'Yldrm2015',
+                timestamp: '2025-03-11 12:41:12',    // Güncellendi
+                userLogin: 'Yldrm2015',              // Güncellendi
                 error: true,
                 message: error.message
             };
         }
     }
+    
   async testBehavioralAnalysis() {
         const testCases = [
             {
@@ -2637,12 +2638,13 @@ class TestSystem {
         }
     }
 }
+
 // Integration Methods for BotDetectionSystem
 class BotDetectionIntegration {
     constructor() {
         this.config = {
-            timestamp: '2025-03-11 11:38:07',
-            userLogin: 'Yldrm2015',
+            timestamp: '2025-03-11 12:39:41',    // Güncellendi
+            userLogin: 'Yldrm2015',              // Güncellendi
             integrationStatus: 'initializing'
         };
         
@@ -2661,10 +2663,11 @@ class BotDetectionIntegration {
             
             return {
                 status: 'success',
-                timestamp: '2025-03-11 11:38:07',
-                userLogin: 'Yldrm2015',
+                timestamp: '2025-03-11 12:39:41',    // Güncellendi
+                userLogin: 'Yldrm2015',              // Güncellendi
                 message: 'Bot detection integration initialized successfully'
             };
+            
         } catch (error) {
             this.config.integrationStatus = 'error';
             console.error(`[2025-03-11 11:38:07] Integration initialization error:`, error);
@@ -2837,13 +2840,13 @@ class BotDetectionIntegration {
 class BotDetectionSystem {
     constructor(config = {}) {
         // Mevcut constructor içeriğine ek olarak:
-        this.integration = new BotDetectionIntegration();
-        this.systemMetadata = {
-            timestamp: '2025-03-11 11:39:24',
-            userLogin: 'Yldrm2015',
-            version: '2.0.0',
-            lastUpdate: '2025-03-11 11:39:24',
-            status: 'initializing'
+           this.integration = new BotDetectionIntegration();
+    this.systemMetadata = {
+        timestamp: '2025-03-11 12:43:57',    // Güncellendi
+        userLogin: 'Yldrm2015',              // Güncellendi
+        version: '2.0.0',
+        lastUpdate: '2025-03-11 12:43:57',   // Güncellendi
+        status: 'initializing'
         };
     }
 
