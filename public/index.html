@@ -99,7 +99,7 @@
     
     <div class="test-section">
         <h2>Bot Detection Status</h2>
-        <p>Current Date and Time (UTC): <span id="current-time">2025-03-11 10:44:14</span></p>
+        <p>Current Date and Time (UTC): <span id="current-time">2025-03-11 13:11:19</span></p>
         <p>Current User: <span id="current-user">Yldrm2015</span></p>
         <p>Current Status: <span id="detection-status" class="status">Not yet checked</span></p>
         <p>Last Checked: <span id="last-checked">Never</span></p>
@@ -156,15 +156,15 @@
         // Initialize bot detection
         const botDetector = new BotDetectionSystem({
             timeAndUserConfig: {
-                currentDateTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                currentDateTime: '2025-03-11 13:11:19',
                 userLogin: "Yldrm2015"
             }
         });
 
         // Update UI elements
         function updateUI() {
-            document.getElementById('current-time').textContent = new Date().toISOString().replace('T', ' ').slice(0, 19);
-            document.getElementById('current-user').textContent = botDetector.config.timeAndUserConfig.userLogin;
+            document.getElementById('current-time').textContent = '2025-03-11 13:11:19';
+            document.getElementById('current-user').textContent = 'Yldrm2015';
         }
 
         // Test status tracking
@@ -233,7 +233,7 @@
             
             // Update time
             updateUI();
-            lastCheckedElement.textContent = new Date().toLocaleTimeString();
+            lastCheckedElement.textContent = '2025-03-11 13:11:19';
             
             // Update status
             if (!result) {
@@ -272,7 +272,7 @@
             const logElement = document.getElementById('detection-log');
             const logEntry = document.createElement('div');
             logEntry.innerHTML = `
-                <p><strong>[${new Date().toLocaleTimeString()}]</strong> 
+                <p><strong>[2025-03-11 13:11:19]</strong> 
                    Detection result: <span class="${result.status === 'likely_human' ? 'human' : 'bot'}">
                    ${result.status}</span> 
                    (Confidence: ${(result.confidence * 100).toFixed(2)}%)
