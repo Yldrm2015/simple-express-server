@@ -1254,33 +1254,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 30000);
 
-    // Handle visibility changes
-    document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') {
-            updateStatus();
-            console.log('Page visibility changed, updating status');
-        }
-    });
-
-    // Handle window focus/blur
-    window.addEventListener('focus', updateStatus);
-    window.addEventListener('blur', function() {
-        console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
-    });
-
-    // Reporting and Analysis Methods
-    generateDetectionReport() {
-        return {
-            timestamp: '2025-03-11 11:25:38',
-            userLogin: 'Yldrm2015',
-            systemStatus: {
-                behavioral: this.generateBehavioralReport(),
-                network: this.generateNetworkReport(),
-                fingerprint: this.generateFingerprintReport(),
-                session: this.generateSessionReport()
-            }
-        };
+// Handle visibility changes
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        updateStatus();
+        console.log('Page visibility changed, updating status');
     }
+});
+
+// Handle window focus/blur
+window.addEventListener('focus', updateStatus);
+window.addEventListener('blur', function() {
+    console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
+}); // Burada sadece bir tane parantez ve noktalı virgül olmalı
+
+// Reporting and Analysis Methods
+generateDetectionReport() {
+    return {
+        timestamp: '2025-03-11 14:27:49', // Timestamp güncellendi
+        userLogin: 'Yldrm2015',
+        systemStatus: {
+            behavioral: this.generateBehavioralReport(),
+            network: this.generateNetworkReport(),
+            fingerprint: this.generateFingerprintReport(),
+            session: this.generateSessionReport()
+        }
+    };
+}
 
     generateBehavioralReport() {
         const mouseMovements = this.behavioralData.mouseMovements;
