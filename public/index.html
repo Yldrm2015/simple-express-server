@@ -142,51 +142,56 @@ function updateDetectionStatus(result) {
     const statusElement = document.getElementById('detection-status');
     const detailsElement = document.getElementById('detection-details');
     const lastCheckedElement = document.getElementById('last-checked');
+    const currentTimeElement = document.getElementById('current-time');
+    
+    // Güncel tarih ve saat formatını güncelle
+    const now = new Date();
+    const utcDateStr = now.toISOString()
+        .replace('T', ' ')
+        .slice(0, 19);
+    currentTimeElement.textContent = utcDateStr;
+    
+    // Son kontrol zamanını güncelle
+    lastCheckedElement.textContent = now.toLocaleTimeString();
     
     // Minimum etkileşim kontrolü
-    const hasMouseData = result.signals?.behavioral?.mouseMovements?.length > 10;
-    const hasScrollData = result.signals?.behavioral?.scrollEvents?.length > 5;
-    const hasKeystrokeData = result.signals?.behavioral?.keystrokePatterns?.length > 5;
+    const hasMouseData = botDetector.behavioralData.mouseMovements.length > 10;
+    const hasScrollData = botDetector.behavioralData.scrollEvents.length > 5;
+    const hasKeystrokeData = botDetector.behavioralData.keystrokePatterns.length > 5;
     
-    // Eğer yeterli veri yoksa "Insufficient Data" göster
+    // Eğer yeterli veri yoksa
     if (!hasMouseData && !hasScrollData && !hasKeystrokeData) {
         statusElement.textContent = 'Insufficient Data';
         statusElement.className = 'status';
-        lastCheckedElement.textContent = new Date().toLocaleTimeString();
         
-        let detailsHtml = '<h4>Detection Details:</h4><ul>';
-        detailsHtml += '<li>Status: Waiting for user interaction</li>';
-        detailsHtml += '<li>Confidence: N/A</li>';
-        detailsHtml += `<li>Mouse Movement: ${hasMouseData ? 'Analyzing' : 'No data'}</li>`;
-        detailsHtml += `<li>Scroll Behavior: ${hasScrollData ? 'Analyzing' : 'No data'}</li>`;
-        detailsHtml += `<li>Keystroke Pattern: ${hasKeystrokeData ? 'Analyzing' : 'No data'}</li>`;
-        detailsHtml += '</ul>';
+        let detailsHtml = '<h4>Detection Details:</h4>';
+        detailsHtml += `<p>Status: Waiting for user interaction</p>`;
+        detailsHtml += `<p>Confidence: N/A</p>`;
+        detailsHtml += `<p>Mouse Movement: ${hasMouseData ? 'Analyzing' : 'No data'}</p>`;
+        detailsHtml += `<p>Scroll Behavior: ${hasScrollData ? 'Analyzing' : 'No data'}</p>`;
+        detailsHtml += `<p>Keystroke Pattern: ${hasKeystrokeData ? 'Analyzing' : 'No data'}</p>`;
         detailsElement.innerHTML = detailsHtml;
         return;
     }
     
-    // Yeterli veri varsa normal analizi göster
+    // Yeterli veri varsa
     statusElement.textContent = result.status === 'likely_human' ? 'Human' : 'Bot';
     statusElement.className = result.status === 'likely_human' ? 'status human' : 'status bot';
     
-    lastCheckedElement.textContent = new Date().toLocaleTimeString();
-    
-    let detailsHtml = '<h4>Detection Details:</h4><ul>';
-    detailsHtml += `<li>Status: ${result.status}</li>`;
-    detailsHtml += `<li>Confidence: ${(result.confidence * 100).toFixed(2)}%</li>`;
+    let detailsHtml = '<h4>Detection Details:</h4>';
+    detailsHtml += `<p>Status: ${result.status}</p>`;
+    detailsHtml += `<p>Confidence: ${(result.confidence * 100).toFixed(2)}%</p>`;
     
     if (result.signals) {
-        detailsHtml += `<li>Mouse Movement: ${hasMouseData ? 
-            (result.signals.behavioral.mouseMovementNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
-        detailsHtml += `<li>Scroll Behavior: ${hasScrollData ? 
-            (result.signals.behavioral.scrollBehaviorNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
-        detailsHtml += `<li>Keystroke Pattern: ${hasKeystrokeData ? 
-            (result.signals.behavioral.keystrokePatternNatural ? 'Natural' : 'Suspicious') : 'No data'}</li>`;
+        detailsHtml += `<p>Mouse Movement: ${hasMouseData ? 
+            (result.signals.behavioral.mouseMovementNatural ? 'Natural' : 'Suspicious') : 'No data'}</p>`;
+        detailsHtml += `<p>Scroll Behavior: ${hasScrollData ? 
+            (result.signals.behavioral.scrollBehaviorNatural ? 'Natural' : 'Suspicious') : 'No data'}</p>`;
+        detailsHtml += `<p>Keystroke Pattern: ${hasKeystrokeData ? 
+            (result.signals.behavioral.keystrokePatternNatural ? 'Natural' : 'Suspicious') : 'No data'}</p>`;
     }
     
-    detailsHtml += '</ul>';
     detailsElement.innerHTML = detailsHtml;
-    
     logDetection(result);
 }
     
