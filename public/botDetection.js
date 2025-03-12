@@ -356,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userLogin: 'Yldrm2015'
         }
     });
+}    
 
     // Helper method to track user interactions
     trackInteraction(type, event) {
