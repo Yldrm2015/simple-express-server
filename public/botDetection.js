@@ -1659,7 +1659,7 @@ calculateInactiveTime() {
 
 // Advanced Analysis Methods
 class AdvancedAnalysis {
-    constructor(timestamp = '2025-03-12 07:25:24', userLogin = 'Yldrm2015') {
+    constructor(timestamp = CURRENT_TIMESTAMP, userLogin = CURRENT_USER) {
         this.timestamp = timestamp;
         this.userLogin = userLogin;
         this.analysisResults = {
@@ -1676,6 +1676,17 @@ class AdvancedAnalysis {
         };
     }
 
+    // Initialize behavioral data
+    initBehavioralData() {
+        this.behavioralData = {
+            mouseMovements: [],
+            keystrokePatterns: [],
+            scrollEvents: [],
+            pageInteractions: []
+        };
+        return this;
+    }
+
     analyzeMousePatterns() {
         try {
             const movements = this.behavioralData.mouseMovements;
@@ -1684,8 +1695,8 @@ class AdvancedAnalysis {
                 curves: 0,
                 stops: 0,
                 averageVelocity: 0,
-                timestamp: '2025-03-12 07:25:24',
-                userLogin: 'Yldrm2015'
+                timestamp: this.timestamp,
+                userLogin: this.userLogin
             };
 
             for (let i = 2; i < movements.length; i++) {
@@ -1790,14 +1801,24 @@ class AdvancedAnalysis {
     }
 
     calculateVelocity(p1, p2) {
+        if (!p1 || !p2) return 0;
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const timeDiff = p2.timestamp - p1.timestamp;
-        return distance / (timeDiff || 1); // Prevent division by zero
+        return timeDiff > 0 ? distance / timeDiff : 0;
     }
 
     detectMousePattern(p1, p2, p3) {
+        if (!p1 || !p2 || !p3) {
+            return {
+                type: 'invalid',
+                velocity: 0,
+                timestamp: this.timestamp,
+                userLogin: this.userLogin
+            };
+        }
+
         const velocity1 = this.calculateVelocity(p1, p2);
         const velocity2 = this.calculateVelocity(p2, p3);
         const angle = this.calculateAngle(p1, p2, p3);
@@ -1811,6 +1832,8 @@ class AdvancedAnalysis {
     }
 
     calculateAngle(p1, p2, p3) {
+        if (!p1 || !p2 || !p3) return 0;
+
         const vector1 = {
             x: p2.x - p1.x,
             y: p2.y - p1.y
