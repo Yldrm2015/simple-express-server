@@ -313,7 +313,7 @@ class BotDetectionSystem {
 
     generateFingerprintReport() {
         return {
-            timestamp: '2025-03-12 08:05:28',
+            timestamp: '2025-03-12 08:15:07',
             userLogin: 'Yldrm2015',
             metrics: {
                 browserProfile: this.generateBrowserProfile(),
@@ -325,7 +325,7 @@ class BotDetectionSystem {
 
     generateSessionReport() {
         return {
-            timestamp: '2025-03-12 08:05:28',
+            timestamp: '2025-03-12 08:15:07',
             userLogin: 'Yldrm2015',
             metrics: {
                 sessionDuration: this.calculateSessionDuration(),
@@ -334,18 +334,8 @@ class BotDetectionSystem {
             }
         };
     }
-}
 
-// Initialize the system when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {//!!!!!
-    const botDetector = new BotDetectionSystem({
-        timeAndUserConfig: {
-            currentDateTime: '2025-03-12 08:05:28',
-            userLogin: 'Yldrm2015'
-        }
-    });
-    
-    // Helper method to track page focus events
+    // Helper method to track page focus events - Buraya taşındı
     trackPageFocus() {
         const timestamp = Date.now();
         const focusEvent = {
@@ -356,6 +346,16 @@ document.addEventListener('DOMContentLoaded', function() {//!!!!!
         this.behavioralData.pageInteractions.push(focusEvent);
         this.behavioralData.lastActivity = timestamp;
     }
+}
+
+// Initialize the system when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const botDetector = new BotDetectionSystem({
+        timeAndUserConfig: {
+            currentDateTime: '2025-03-12 08:15:07',
+            userLogin: 'Yldrm2015'
+        }
+    });
 
     // Helper method to track user interactions
     trackInteraction(type, event) {
