@@ -1268,7 +1268,8 @@ window.addEventListener('blur', function() {
     console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
 }); // Burada sadece bir tane parantez ve noktalı virgül olmalı
 
-generateDetectionReport = function() {    // Bu şekilde değiştirelim
+class BotDetectionSystem {
+    generateDetectionReport() {
         return {
             timestamp: '2025-03-11 14:36:35',
             userLogin: 'Yldrm2015',
