@@ -1659,12 +1659,13 @@ calculateInactiveTime() {
 
 // Advanced Analysis Methods
 class AdvancedAnalysis {
-    constructor(timestamp = '2025-03-11 12:43:57', userLogin = 'Yldrm2015') {    // Güncellendi
+    constructor(timestamp = '2025-03-12 07:08:56', userLogin = 'Yldrm2015') {
         this.timestamp = timestamp;
         this.userLogin = userLogin;
         this.analysisResults = {
             mouseAnalysis: [],
-            keyboardAnalysis: [],
+            
+            keyboar keyboardAnalysis: [],
             scrollAnalysis: [],
             interactionPatterns: []
         };
@@ -1678,17 +1679,19 @@ class AdvancedAnalysis {
                 curves: 0,
                 stops: 0,
                 averageVelocity: 0,
-                timestamp: '2025-03-11 12:43:57',    // Güncellendi
-                userLogin: 'Yldrm2015'               // Güncellendi
+                timestamp: '2025-03-12 07:08:56',
+                userLogin: 'Yldrm2015'
             };
 
-            for (let i = 2; i < movements.length; i++) {
+             for (let i = 2; i < movements.length; i++) {
                 const pattern = this.detectMousePattern(
                     movements[i-2],
                     movements[i-1],
                     movements[i]
                 );
-                patterns[pattern.type]++;
+                patterns[pattern.
+                    movements[i]
+                 type]++;
                 patterns.averageVelocity += pattern.velocity;
             }
 
@@ -1696,14 +1699,15 @@ class AdvancedAnalysis {
                 patterns.averageVelocity /= (movements.length - 2);
             }
 
-            return patterns;
+            
+            } return patterns;
         } catch (error) {
             console.error(`[${this.timestamp}] Mouse pattern analysis error:`, error);
             return null;
         }
     }
 
-    analyzeKeyboardPatterns() {
+     analyzeKeyboardPatterns() {
         try {
             const keystrokes = this.behavioralData.keystrokePatterns;
             let patterns = {
@@ -1716,7 +1720,7 @@ class AdvancedAnalysis {
                 userLogin: this.userLogin
             };
 
-            let totalInterval = 0;
+             let totalInterval = 0;
             let intervalCount = 0;
 
             for (let i = 1; i < keystrokes.length; i++) {
@@ -1732,10 +1736,14 @@ class AdvancedAnalysis {
                 intervalCount++;
             }
 
-            patterns.averageInterval = intervalCount > 0 ? totalInterval / intervalCount : 0;
+            patterns.
+                
+                totalInterval += averageInterval = intervalCount > 0 ? totalInterval / intervalCount : 0;
 
-            return patterns;
-        } catch (error) {
+            
+
+             return patterns;
+         catch (error) {
             console.error(`[${this.timestamp}] Keyboard pattern analysis error:`, error);
             return null;
         }
