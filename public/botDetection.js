@@ -10,7 +10,7 @@ class BotDetectionSystem {
                 checkConnectionSpeed: true
             },
             timeAndUserConfig: {
-                currentDateTime: '2025-03-11 12:33:04',  
+                currentDateTime: '2025-03-12 08:05:28',  
                 userLogin: "Yldrm2015",                  
                 lastChecked: null,
                 status: 'Not yet checked'
@@ -41,6 +41,50 @@ class BotDetectionSystem {
         this.initializeFingerprinting();
         this.initializeNetworkControls();
         this.initializeCookieStorage();
+
+        // Integration initialization
+        this.integration = new BotDetectionIntegration();
+        this.systemMetadata = {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            version: '2.0.0',
+            lastUpdate: '2025-03-12 08:05:28',
+            status: 'initializing'
+        };
+    }
+
+    async initializeWithIntegration() {
+        try {
+            // Initialize core system
+            await this.initialize();
+
+            // Initialize integration
+            const integrationResult = await this.integration.initialize();
+
+            if (integrationResult.status === 'success') {
+                this.systemMetadata.status = 'ready';
+                console.log(`[2025-03-12 08:05:28] Bot detection system initialized successfully for user ${this.systemMetadata.userLogin}`);
+            } else {
+                throw new Error(integrationResult.message);
+            }
+
+            return {
+                status: 'success',
+                timestamp: '2025-03-12 08:05:28',
+                userLogin: 'Yldrm2015',
+                message: 'System initialized successfully with all integrations'
+            };
+        } catch (error) {
+            this.systemMetadata.status = 'error';
+            console.error(`[2025-03-12 08:05:28] System initialization error:`, error);
+            
+            return {
+                status: 'error',
+                timestamp: '2025-03-12 08:05:28',
+                userLogin: 'Yldrm2015',
+                message: error.message
+            };
+        }
     }
 
     // Behavioral Analysis Methods
@@ -180,6 +224,127 @@ class BotDetectionSystem {
         return this.assessKeystrokeNaturalness();
     }
 
+    async enhancedDetectBot() {
+        try {
+            // Get basic detection result
+            const basicResult = await this.detectBot();
+
+            // Process through integration
+            const enhancedResult = await this.integration.processDetectionResult(basicResult);
+
+            // Combine results
+            return {
+                ...basicResult,
+                enhanced: enhancedResult,
+                timestamp: '2025-03-12 08:05:28',
+                userLogin: 'Yldrm2015'
+            };
+        } catch (error) {
+            console.error(`[2025-03-12 08:05:28] Enhanced detection error:`, error);
+            return {
+                error: true,
+                message: error.message,
+                timestamp: '2025-03-12 08:05:28',
+                userLogin: 'Yldrm2015'
+            };
+        }
+    }
+
+    generateDetectionReport() {
+        return {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            systemStatus: {
+                behavioral: this.generateBehavioralReport(),
+                network: this.generateNetworkReport(),
+                fingerprint: this.generateFingerprintReport(),
+                session: this.generateSessionReport()
+            }
+        };
+    }
+
+    generateBehavioralReport() {
+        const mouseMovements = this.behavioralData.mouseMovements;
+        const keystrokes = this.behavioralData.keystrokePatterns;
+        const scrollEvents = this.behavioralData.scrollEvents;
+
+        return {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            metrics: {
+                mouseMetrics: {
+                    totalMovements: mouseMovements.length,
+                    naturalMovements: mouseMovements.filter(m => 
+                        this.isNaturalMovement(m)).length,
+                    averageVelocity: this.calculateAverageMouseVelocity(),
+                    lastActivity: this.behavioralData.lastActivity
+                },
+                keyboardMetrics: {
+                    totalKeystrokes: keystrokes.length,
+                    naturalPatterns: keystrokes.filter(k => 
+                        this.isNaturalKeystrokePattern(k)).length,
+                    averageInterval: this.calculateAverageKeystrokeInterval(),
+                    patterns: this.analyzeKeystrokePatterns()
+                },
+                scrollMetrics: {
+                    totalScrolls: scrollEvents.length,
+                    naturalScrolls: scrollEvents.filter(s => 
+                        this.isNaturalScroll(s)).length,
+                    averageSpeed: this.calculateAverageScrollSpeed(),
+                    patterns: this.analyzeScrollPatterns()
+                }
+            }
+        };
+    }
+
+    generateNetworkReport() {
+        return {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            metrics: {
+                connection: this.networkData.connectionType,
+                webRTC: this.networkData.webRTCData,
+                headers: this.networkData.headersAnalyzed ? 
+                    this.analyzeHeaders(this.getRequestHeaders()) : null,
+                anomalies: this.detectNetworkAnomalies()
+            }
+        };
+    }
+
+    generateFingerprintReport() {
+        return {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            metrics: {
+                browserProfile: this.generateBrowserProfile(),
+                hardwareProfile: this.generateHardwareProfile(),
+                consistencyScore: this.calculateFingerprintConsistency()
+            }
+        };
+    }
+
+    generateSessionReport() {
+        return {
+            timestamp: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015',
+            metrics: {
+                sessionDuration: this.calculateSessionDuration(),
+                interactionFrequency: this.calculateInteractionFrequency(),
+                activityPatterns: this.analyzeActivityPatterns()
+            }
+        };
+    }
+}
+
+// Initialize the system when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {//!!!!!
+    const botDetector = new BotDetectionSystem({
+        timeAndUserConfig: {
+            currentDateTime: '2025-03-12 08:05:28',
+            userLogin: 'Yldrm2015'
+        }
+    });
+    
     // Helper method to track page focus events
     trackPageFocus() {
         const timestamp = Date.now();
