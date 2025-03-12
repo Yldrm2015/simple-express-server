@@ -1268,19 +1268,18 @@ window.addEventListener('blur', function() {
     console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
 }); // Burada sadece bir tane parantez ve noktalı virgül olmalı
 
-// Reporting and Analysis Methods
-generateDetectionReport() {
-    return {
-        timestamp: '2025-03-11 14:27:49', // Timestamp güncellendi
-        userLogin: 'Yldrm2015',
-        systemStatus: {
-            behavioral: this.generateBehavioralReport(),
-            network: this.generateNetworkReport(),
-            fingerprint: this.generateFingerprintReport(),
-            session: this.generateSessionReport()
-        }
-    };
-}
+generateDetectionReport = function() {    // Bu şekilde değiştirelim
+        return {
+            timestamp: '2025-03-11 14:36:35',
+            userLogin: 'Yldrm2015',
+            systemStatus: {
+                behavioral: this.generateBehavioralReport(),
+                network: this.generateNetworkReport(),
+                fingerprint: this.generateFingerprintReport(),
+                session: this.generateSessionReport()
+            }
+        };
+    }
 
     generateBehavioralReport() {
         const mouseMovements = this.behavioralData.mouseMovements;
