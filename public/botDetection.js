@@ -1433,92 +1433,6 @@ window.addEventListener('blur', function() {
     console.log('Window lost focus:', botDetector.config.timeAndUserConfig.currentDateTime);
 }); // Burada sadece bir tane parantez ve noktalı virgül olmalı
 
-class BotDetectionSystem {
-    generateDetectionReport() {
-        return {
-            timestamp: '2025-03-11 14:36:35',
-            userLogin: 'Yldrm2015',
-            systemStatus: {
-                behavioral: this.generateBehavioralReport(),
-                network: this.generateNetworkReport(),
-                fingerprint: this.generateFingerprintReport(),
-                session: this.generateSessionReport()
-            }
-        };
-    }
-
-    generateBehavioralReport() {
-        const mouseMovements = this.behavioralData.mouseMovements;
-        const keystrokes = this.behavioralData.keystrokePatterns;
-        const scrollEvents = this.behavioralData.scrollEvents;
-
-        return {
-            timestamp: '2025-03-11 11:25:38',
-            userLogin: 'Yldrm2015',
-            metrics: {
-                mouseMetrics: {
-                    totalMovements: mouseMovements.length,
-                    naturalMovements: mouseMovements.filter(m => 
-                        this.isNaturalMovement(m)).length,
-                    averageVelocity: this.calculateAverageMouseVelocity(),
-                    lastActivity: this.behavioralData.lastActivity
-                },
-                keyboardMetrics: {
-                    totalKeystrokes: keystrokes.length,
-                    naturalPatterns: keystrokes.filter(k => 
-                        this.isNaturalKeystrokePattern(k)).length,
-                    averageInterval: this.calculateAverageKeystrokeInterval(),
-                    patterns: this.analyzeKeystrokePatterns()
-                },
-                scrollMetrics: {
-                    totalScrolls: scrollEvents.length,
-                    naturalScrolls: scrollEvents.filter(s => 
-                        this.isNaturalScroll(s)).length,
-                    averageSpeed: this.calculateAverageScrollSpeed(),
-                    patterns: this.analyzeScrollPatterns()
-                }
-            }
-        };
-    }
-
-    generateNetworkReport() {
-        return {
-            timestamp: '2025-03-11 11:25:38',
-            userLogin: 'Yldrm2015',
-            metrics: {
-                connection: this.networkData.connectionType,
-                webRTC: this.networkData.webRTCData,
-                headers: this.networkData.headersAnalyzed ? 
-                    this.analyzeHeaders(this.getRequestHeaders()) : null,
-                anomalies: this.detectNetworkAnomalies()
-            }
-        };
-    }
-
-    generateFingerprintReport() {
-        return {
-            timestamp: '2025-03-11 11:25:38',
-            userLogin: 'Yldrm2015',
-            metrics: {
-                browserProfile: this.generateBrowserProfile(),
-                hardwareProfile: this.generateHardwareProfile(),
-                consistencyScore: this.calculateFingerprintConsistency()
-            }
-        };
-    }
-
-    generateSessionReport() {
-        return {
-            timestamp: '2025-03-11 11:25:38',
-            userLogin: 'Yldrm2015',
-            metrics: {
-                sessionDuration: this.calculateSessionDuration(),
-                interactionFrequency: this.calculateInteractionFrequency(),
-                activityPatterns: this.analyzeActivityPatterns()
-            }
-        };
-    }
-
     // Advanced Analysis Helper Methods
     isNaturalMovement(movement) {
         if (!movement || !movement.timestamp) return false;
@@ -3021,19 +2935,6 @@ class BotDetectionIntegration {
         }
     }
 }
-// Main Integration Methods for BotDetectionSystem
-class BotDetectionSystem {
-    constructor(config = {}) {
-        // Mevcut constructor içeriğine ek olarak:
-           this.integration = new BotDetectionIntegration();
-    this.systemMetadata = {
-        timestamp: '2025-03-11 12:43:57',    // Güncellendi
-        userLogin: 'Yldrm2015',              // Güncellendi
-        version: '2.0.0',
-        lastUpdate: '2025-03-11 12:43:57',   // Güncellendi
-        status: 'initializing'
-        };
-    }
 
     async initializeWithIntegration() {
         try {
