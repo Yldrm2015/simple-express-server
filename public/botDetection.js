@@ -1613,78 +1613,61 @@ optimizeArrays() {
 }
 
 // Error Handling Enhancement
-handleError(error, context) {
-    const errorLog = {
-        timestamp: '2025-03-11 11:31:00',
-        userLogin: 'Yldrm2015',
-        context,
-        error: {
-            message: error.message,
-            stack: error.stack,
-            type: error.name
-        },
-        systemState: {
-            dataPoints: this.getDetectionStatus().dataPoints,
-            sessionActive: this.storageData?.sessionId ? true : false
-        }
-    };
-
-    console.error('Bot Detection Error:', errorLog);
-    return errorLog;
-}
-
-getMimeTypes() {
-    try {
-        const mimeTypes = [];
-        if (navigator.mimeTypes) {
-            for (let i = 0; i < navigator.mimeTypes.length; i++) {
-                const mime = navigator.mimeTypes[i];
-                mimeTypes.push({
-                    type: mime.type,
-                    description: mime.description,
-                    suffixes: mime.suffixes
-                });
+    handleError(error, context) {
+        const errorLog = {
+            timestamp: CURRENT_TIMESTAMP,
+            userLogin: this.userLogin,
+            context,
+            error: {
+                message: error.message,
+                stack: error.stack,
+                type: error.name
+            },
+            systemState: {
+                dataPoints: this.getDetectionStatus()?.dataPoints,
+                sessionActive: this.storageData?.sessionId ? true : false
             }
+        };
+
+        console.error('Bot Detection Error:', errorLog);
+        return errorLog;
+    }
+
+    getMimeTypes() {
+        try {
+            const mimeTypes = [];
+            if (typeof navigator !== 'undefined' && navigator.mimeTypes) {
+                for (let i = 0; i < navigator.mimeTypes.length; i++) {
+                    const mime = navigator.mimeTypes[i];
+                    mimeTypes.push({
+                        type: mime.type,
+                        description: mime.description,
+                        suffixes: mime.suffixes
+                    });
+                }
+            }
+            return mimeTypes;
+        } catch (error) {
+            this.handleError(error, 'getMimeTypes');
+            return [];
         }
-        return mimeTypes;
-    } catch (error) {
-        this.handleError(error, 'getMimeTypes');
-        return [];
-    }
-}
-
-calculateInactiveTime() {
-    return Date.now() - this.behavioralData.lastActivity;
-}
-
-// Advanced Analysis Methods
-class AdvancedAnalysis {
-    constructor(timestamp = CURRENT_TIMESTAMP, userLogin = CURRENT_USER) {
-        this.timestamp = timestamp;
-        this.userLogin = userLogin;
-        this.analysisResults = {
-            mouseAnalysis: [],
-            keyboardAnalysis: [],
-            scrollAnalysis: [],
-            interactionPatterns: []
-        };
-        this.behavioralData = {
-            mouseMovements: [],
-            keystrokePatterns: [],
-            scrollEvents: [],
-            pageInteractions: []
-        };
     }
 
-    // Initialize behavioral data
-    initBehavioralData() {
-        this.behavioralData = {
-            mouseMovements: [],
-            keystrokePatterns: [],
-            scrollEvents: [],
-            pageInteractions: []
-        };
-        return this;
+    calculateInactiveTime() {
+        return Date.now() - this.behavioralData.lastActivity;
+    }
+
+    getDetectionStatus() {
+        try {
+            return {
+                dataPoints: this.analysisResults,
+                lastActivity: this.behavioralData.lastActivity,
+                inactiveTime: this.calculateInactiveTime()
+            };
+        } catch (error) {
+            this.handleError(error, 'getDetectionStatus');
+            return { dataPoints: [], lastActivity: null, inactiveTime: 0 };
+        }
     }
 
     analyzeMousePatterns() {
@@ -1715,7 +1698,7 @@ class AdvancedAnalysis {
 
             return patterns;
         } catch (error) {
-            console.error(`[${this.timestamp}] Mouse pattern analysis error:`, error);
+            this.handleError(error, 'analyzeMousePatterns');
             return null;
         }
     }
@@ -1753,7 +1736,7 @@ class AdvancedAnalysis {
 
             return patterns;
         } catch (error) {
-            console.error(`[${this.timestamp}] Keyboard pattern analysis error:`, error);
+            this.handleError(error, 'analyzeKeyboardPatterns');
             return null;
         }
     }
@@ -1795,7 +1778,7 @@ class AdvancedAnalysis {
 
             return patterns;
         } catch (error) {
-            console.error(`[${this.timestamp}] Scroll pattern analysis error:`, error);
+            this.handleError(error, 'analyzeScrollingPatterns');
             return null;
         }
     }
@@ -1894,7 +1877,7 @@ class AdvancedAnalysis {
 
             return sequence;
         } catch (error) {
-            console.error(`[${this.timestamp}] Interaction sequence analysis error:`, error);
+            this.handleError(error, 'analyzeInteractionSequence');
             return null;
         }
     }
