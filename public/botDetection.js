@@ -1659,15 +1659,20 @@ calculateInactiveTime() {
 
 // Advanced Analysis Methods
 class AdvancedAnalysis {
-    constructor(timestamp = '2025-03-12 07:08:56', userLogin = 'Yldrm2015') {
+    constructor(timestamp = '2025-03-12 07:25:24', userLogin = 'Yldrm2015') {
         this.timestamp = timestamp;
         this.userLogin = userLogin;
         this.analysisResults = {
             mouseAnalysis: [],
-            
-            keyboar keyboardAnalysis: [],
+            keyboardAnalysis: [],
             scrollAnalysis: [],
             interactionPatterns: []
+        };
+        this.behavioralData = {
+            mouseMovements: [],
+            keystrokePatterns: [],
+            scrollEvents: [],
+            pageInteractions: []
         };
     }
 
@@ -1679,19 +1684,17 @@ class AdvancedAnalysis {
                 curves: 0,
                 stops: 0,
                 averageVelocity: 0,
-                timestamp: '2025-03-12 07:08:56',
+                timestamp: '2025-03-12 07:25:24',
                 userLogin: 'Yldrm2015'
             };
 
-             for (let i = 2; i < movements.length; i++) {
+            for (let i = 2; i < movements.length; i++) {
                 const pattern = this.detectMousePattern(
                     movements[i-2],
                     movements[i-1],
                     movements[i]
                 );
-                patterns[pattern.
-                    movements[i]
-                 type]++;
+                patterns[pattern.type]++;
                 patterns.averageVelocity += pattern.velocity;
             }
 
@@ -1699,15 +1702,14 @@ class AdvancedAnalysis {
                 patterns.averageVelocity /= (movements.length - 2);
             }
 
-            
-            } return patterns;
+            return patterns;
         } catch (error) {
             console.error(`[${this.timestamp}] Mouse pattern analysis error:`, error);
             return null;
         }
     }
 
-     analyzeKeyboardPatterns() {
+    analyzeKeyboardPatterns() {
         try {
             const keystrokes = this.behavioralData.keystrokePatterns;
             let patterns = {
@@ -1720,7 +1722,7 @@ class AdvancedAnalysis {
                 userLogin: this.userLogin
             };
 
-             let totalInterval = 0;
+            let totalInterval = 0;
             let intervalCount = 0;
 
             for (let i = 1; i < keystrokes.length; i++) {
@@ -1736,14 +1738,10 @@ class AdvancedAnalysis {
                 intervalCount++;
             }
 
-            patterns.
-                
-                totalInterval += averageInterval = intervalCount > 0 ? totalInterval / intervalCount : 0;
+            patterns.averageInterval = intervalCount > 0 ? totalInterval / intervalCount : 0;
 
-            
-
-             return patterns;
-         catch (error) {
+            return patterns;
+        } catch (error) {
             console.error(`[${this.timestamp}] Keyboard pattern analysis error:`, error);
             return null;
         }
@@ -1789,6 +1787,14 @@ class AdvancedAnalysis {
             console.error(`[${this.timestamp}] Scroll pattern analysis error:`, error);
             return null;
         }
+    }
+
+    calculateVelocity(p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const timeDiff = p2.timestamp - p1.timestamp;
+        return distance / (timeDiff || 1); // Prevent division by zero
     }
 
     detectMousePattern(p1, p2, p3) {
